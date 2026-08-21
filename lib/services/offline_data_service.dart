@@ -1,6 +1,6 @@
-
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 import '../models/offline_operation.dart';
 
 class OfflineDataService {
@@ -27,7 +27,7 @@ class OfflineDataService {
       
       await prefs.setString(dataKey, jsonEncode(offlineData));
     } catch (e) {
-      
+      debugPrint('OfflineDataService.saveData error: $e');
     }
   }
   
@@ -54,7 +54,7 @@ class OfflineDataService {
       final dataKey = _offlineDataPrefix + key;
       await prefs.remove(dataKey);
     } catch (e) {
-      
+      debugPrint('OfflineDataService.removeData error: $e');
     }
   }
   
@@ -70,7 +70,7 @@ class OfflineDataService {
         }
       }
     } catch (e) {
-      
+      debugPrint('OfflineDataService.clearAllData error: $e');
     }
   }
   
@@ -83,7 +83,7 @@ class OfflineDataService {
         DateTime.now().toIso8601String(),
       );
     } catch (e) {
-      
+      debugPrint('OfflineDataService.updateLastSyncTime error: $e');
     }
   }
   
@@ -176,7 +176,7 @@ class OfflineDataService {
         jsonEncode(operations.map((op) => op.toJson()).toList()),
       );
     } catch (e) {
-      
+      debugPrint('OfflineDataService.queueOperation error: $e');
     }
   }
 
@@ -221,7 +221,7 @@ class OfflineDataService {
         );
       }
     } catch (e) {
-      
+      debugPrint('OfflineDataService.updateOperationStatus error: $e');
     }
   }
 
@@ -244,7 +244,7 @@ class OfflineDataService {
         );
       }
     } catch (e) {
-      
+      debugPrint('OfflineDataService.incrementRetryCount error: $e');
     }
   }
 
@@ -260,7 +260,7 @@ class OfflineDataService {
         jsonEncode(operations.map((op) => op.toJson()).toList()),
       );
     } catch (e) {
-      
+      debugPrint('OfflineDataService.removeOperation error: $e');
     }
   }
 
@@ -290,7 +290,7 @@ class OfflineDataService {
         conflictReason: '数据冲突：服务器数据已更新',
       );
     } catch (e) {
-      
+      debugPrint('OfflineDataService.saveConflict error: $e');
     }
   }
 
@@ -334,7 +334,7 @@ class OfflineDataService {
         await updateOperationStatus(operationId, SyncStatus.pending);
       }
     } catch (e) {
-      
+      debugPrint('OfflineDataService.resolveConflict error: $e');
     }
   }
 
@@ -344,7 +344,7 @@ class OfflineDataService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_conflictsKey);
     } catch (e) {
-      
+      debugPrint('OfflineDataService.clearAllConflicts error: $e');
     }
   }
 

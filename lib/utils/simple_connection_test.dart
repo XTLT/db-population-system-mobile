@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 
 class SimpleConnectionTest {
@@ -18,8 +20,11 @@ class SimpleConnectionTest {
       },
     ));
     
-    
-    dio.options.validateCertificate = false;
+    // 配置HTTP客户端以允许自签名证书
+    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
+      client.badCertificateCallback = (cert, host, port) => true;
+      return client;
+    };
     
     debugPrint('========== 简单连接测试 ==========');
     debugPrint('URL: $url');

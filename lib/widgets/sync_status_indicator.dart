@@ -20,7 +20,7 @@ class SyncStatusIndicator extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: _getStatusColor(syncProvider).withOpacity(0.1),
+              color: _getStatusColor(syncProvider).withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: _getStatusColor(syncProvider),

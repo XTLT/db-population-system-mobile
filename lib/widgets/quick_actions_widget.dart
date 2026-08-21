@@ -66,7 +66,7 @@ class QuickActionsWidget extends StatelessWidget {
       onPressed: action.onTap,
       backgroundColor: Theme.of(context).colorScheme.surface,
       side: BorderSide(
-        color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       labelStyle: TextStyle(
