@@ -7,6 +7,7 @@ import 'dart:io';
 import '../../providers/auth_provider.dart';
 import '../home/home_page.dart';
 import '../../config/app_config.dart';
+import '../../utils/security_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -234,9 +235,10 @@ class _LoginPageState extends State<LoginPage> {
       dio.options.connectTimeout = const Duration(seconds: 10);
       dio.options.receiveTimeout = const Duration(seconds: 10);
       
-      
+      // 允许自签名证书
       (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
         client.connectionTimeout = const Duration(seconds: 10);
+        client.badCertificateCallback = (cert, host, port) => true;
         return client;
       };
       
@@ -248,14 +250,13 @@ class _LoginPageState extends State<LoginPage> {
       final healthResponse = await dio.get('$url/api/health');
       debugPrint('Health 响应: ${healthResponse.data}');
       
-      
-      
-      final testUsername = const String.fromEnvironment('TEST_USERNAME', defaultValue: '');
-      final testPassword = const String.fromEnvironment('TEST_PASSWORD', defaultValue: '');
+      // 使用用户输入的用户名和密码测试登录
+      final testUsername = _usernameController.text.trim();
+      final testPassword = _passwordController.text;
       
       if (testUsername.isEmpty || testPassword.isEmpty) {
-        
-        debugPrint('未配置测试账户，跳过登录测试');
+        // 用户未输入凭据，只测试健康检查
+        debugPrint('未输入用户名或密码，跳过登录测试');
         if (healthResponse.statusCode == 200) {
           Navigator.pop(context);
           showDialog(
@@ -268,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
                   Text('连接成功'),
                 ],
               ),
-              content: const Text('服务器连接正常'),
+              content: const Text('服务器连接正常\n\n如需测试登录功能，请先输入用户名和密码'),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
@@ -281,9 +282,16 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       
+      // 使用用户输入的凭据测试登录（移动端方式：发送 sha256(password)）
+      final hashedPassword = SecurityUtils.hashPassword(testPassword);
+      
       final loginResponse = await dio.post(
         '$url/api/login',
-        data: {'username': testUsername, 'password': testPassword},
+        data: {
+          'username': testUsername,
+          'password': hashedPassword,
+          'password_hashed': true,
+        },
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
       debugPrint('登录响应: ${loginResponse.data}');
@@ -291,14 +299,18 @@ class _LoginPageState extends State<LoginPage> {
       Navigator.pop(context);
       
       if (healthResponse.statusCode == 200 && loginResponse.statusCode == 200) {
+        final loginSuccess = loginResponse.data['success'] == true;
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 8),
-                Text('连接成功'),
+                Icon(
+                  loginSuccess ? Icons.check_circle : Icons.error,
+                  color: loginSuccess ? Colors.green : Colors.orange,
+                ),
+                const SizedBox(width: 8),
+                Text(loginSuccess ? '连接成功' : '连接测试'),
               ],
             ),
             content: Column(
@@ -307,11 +319,15 @@ class _LoginPageState extends State<LoginPage> {
               children: [
                 Text('服务器地址: $url'),
                 const SizedBox(height: 8),
-                Text('Health状态: ${healthResponse.data}'),
+                Text('Health状态: 正常'),
                 const SizedBox(height: 8),
-                Text('登录测试: ${loginResponse.data['success'] == true ? "成功" : "失败"}'),
-                if (loginResponse.data['success'] == true)
-                  Text('Token: ${loginResponse.data['token'].toString().substring(0, 20)}...'),
+                Text('登录测试: ${loginSuccess ? "成功" : "失败"}'),
+                if (!loginSuccess && loginResponse.data['error'] != null)
+                  Text('错误: ${loginResponse.data['error']}', 
+                    style: const TextStyle(color: Colors.red, fontSize: 12)),
+                if (loginSuccess)
+                  Text('用户: ${loginResponse.data['user']?['username'] ?? testUsername}',
+                    style: const TextStyle(color: Colors.green)),
               ],
             ),
             actions: [
@@ -341,6 +357,8 @@ class _LoginPageState extends State<LoginPage> {
             '3. 网络不通';
       } else if (e.type == DioExceptionType.connectionTimeout) {
         errorDetail = '连接超时\n${e.message}';
+      } else if (e.type == DioExceptionType.badResponse) {
+        errorDetail = '服务器返回错误: ${e.response?.statusCode}\n${e.response?.data}';
       } else {
         errorDetail = '${e.type}: ${e.message}\n${e.error}';
       }

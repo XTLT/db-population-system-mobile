@@ -33,8 +33,10 @@ class ApiClient {
     
     
     
+    // 允许自签名证书（用于 HTTPS）
     (_dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
       client.connectionTimeout = const Duration(seconds: 15);
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
       return client;
     };
     
