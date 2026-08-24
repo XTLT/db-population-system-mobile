@@ -145,4 +145,64 @@ class StatisticsApi {
       throw Exception('获取地力补贴统计失败: $e');
     }
   }
+
+  /// 获取待遇发放统计
+  static Future<Map<String, dynamic>> getTreatmentPaymentStatistics() async {
+    try {
+      final response = await _dio.get('/api/treatment_payment/statistics');
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('获取待遇发放统计失败');
+      }
+    } catch (e) {
+      throw Exception('获取待遇发放统计失败: $e');
+    }
+  }
+
+  /// 获取养老保险统计
+  static Future<Map<String, dynamic>> getPensionInsuranceStatistics() async {
+    try {
+      final response = await _dio.get('/api/pension_insurance/statistics');
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('获取养老保险统计失败');
+      }
+    } catch (e) {
+      throw Exception('获取养老保险统计失败: $e');
+    }
+  }
+
+  /// 获取待遇发放年份列表
+  static Future<List<String>> getTreatmentPaymentYears() async {
+    try {
+      final response = await _dio.get('/api/treatment_payment/years');
+
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['years'] ?? []);
+      } else {
+        throw Exception('获取待遇发放年份数据失败');
+      }
+    } catch (e) {
+      throw Exception('获取待遇发放年份数据失败: $e');
+    }
+  }
+
+  /// 获取养老保险年份列表
+  static Future<List<String>> getPensionInsuranceYears() async {
+    try {
+      final response = await _dio.get('/api/pension_insurance/years');
+
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['years'] ?? []);
+      } else {
+        throw Exception('获取养老保险年份数据失败');
+      }
+    } catch (e) {
+      throw Exception('获取养老保险年份数据失败: $e');
+    }
+  }
 }
