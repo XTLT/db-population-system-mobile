@@ -545,7 +545,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
                     _buildDropdown(
                       value: _dibao,
                       label: '低保',
-                      items: const ['', '是', '否', '低保边缘家庭'],
+                      items: const ['', '是', '否', '低保边缘家庭', '特困家庭'],
                       onChanged: (value) {
                         setState(() {
                           _dibao = value;

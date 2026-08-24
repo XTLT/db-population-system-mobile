@@ -37,7 +37,7 @@ class _CustomReportBuilderPageState extends State<CustomReportBuilderPage> {
       'is_dead': ['是', '否'],
       'poor_type': ['贫困户', '低保户', '特困户', '非贫困户'],
       'disability': ['是', '否'],
-      'dibao': ['是', '否'],
+      'dibao': ['是', '否', '低保边缘家庭', '特困家庭'],
     },
     'student': {
       'grade': ['一年级', '二年级', '三年级', '四年级', '五年级', '六年级'],

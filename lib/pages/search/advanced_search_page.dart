@@ -605,6 +605,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                 DropdownMenuItem(value: null, child: Text('全部')),
                 DropdownMenuItem(value: '城市低保', child: Text('城市低保')),
                 DropdownMenuItem(value: '农村低保', child: Text('农村低保')),
+                DropdownMenuItem(value: '低保边缘家庭', child: Text('低保边缘家庭')),
+                DropdownMenuItem(value: '特困家庭', child: Text('特困家庭')),
               ],
               onChanged: (value) {
                 setState(() {
