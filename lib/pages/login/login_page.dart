@@ -282,15 +282,13 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
       
-      // 使用用户输入的凭据测试登录（移动端方式：发送 sha256(password)）
-      final hashedPassword = SecurityUtils.hashPassword(testPassword);
-      
+      // 使用用户输入的凭据测试登录（发送原始密码以支持 Argon2id）
       final loginResponse = await dio.post(
         '$url/api/login',
         data: {
           'username': testUsername,
-          'password': hashedPassword,
-          'password_hashed': true,
+          'password': testPassword,
+          'password_hashed': false,
         },
         options: Options(headers: {'Content-Type': 'application/json'}),
       );

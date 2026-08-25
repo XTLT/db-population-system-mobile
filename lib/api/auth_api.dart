@@ -12,13 +12,11 @@ class AuthApi {
   
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
-      
-      final hashedPassword = SecurityUtils.hashPassword(password);
-      
+      // 发送原始密码以支持 Argon2id 验证（HTTPS 加密传输）
       final response = await _dio.post('/api/login', data: {
         'username': username,
-        'password': hashedPassword,
-        'password_hashed': true,  
+        'password': password,
+        'password_hashed': false,
       });
       
       if (response.statusCode == 200) {
@@ -89,14 +87,11 @@ class AuthApi {
     String newPassword,
   ) async {
     try {
-      
-      final hashedOldPassword = SecurityUtils.hashPassword(oldPassword);
-      final hashedNewPassword = SecurityUtils.hashPassword(newPassword);
-      
+      // 发送原始密码以支持 Argon2id 验证
       final response = await _dio.post('/api/change_password', data: {
-        'old_password': hashedOldPassword,
-        'new_password': newPassword,  
-        'password_hashed': true,
+        'old_password': oldPassword,
+        'new_password': newPassword,
+        'password_hashed': false,
       });
       
       return {
