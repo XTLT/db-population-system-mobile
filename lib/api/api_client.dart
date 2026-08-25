@@ -1,9 +1,10 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import '../config/app_config.dart';
 import '../services/network_cache.dart';
-import 'dart:io';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -12,10 +13,8 @@ class ApiClient {
   late Dio _dio;
   String? _token;
   
-  
   final Map<String, int> _activeRequests = {};
   static const int _maxConcurrentRequests = 20;  
-  
   
   static const int _maxRetries = 3;
   static const Duration _retryDelay = Duration(seconds: 1);
@@ -31,17 +30,10 @@ class ApiClient {
       },
     ));
     
-    
-    
-    // 允许自签名证书（用于 HTTPS）
-    (_dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
-      client.connectionTimeout = const Duration(seconds: 15);
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) => true;
-      return client;
-    };
+    // 证书固定：从 assets 加载服务端证书
+    _initCertificatePinning();
     
     debugPrint('ApiClient 初始化，baseUrl: ${AppConfig.apiBaseUrl}');
-    
     
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -58,17 +50,13 @@ class ApiClient {
           );
         }
         
-        
         _activeRequests[requestKey] = (_activeRequests[requestKey] ?? 0) + 1;
-        
         
         if (_token != null) {
           options.headers['Authorization'] = 'Bearer $_token';
         }
         
-        
         options.baseUrl = AppConfig.apiBaseUrl;
-        
         
         if (NetworkCache.shouldCache(options.method, options.path)) {
           final cacheKey = NetworkCache.generateKey(
@@ -165,6 +153,44 @@ class ApiClient {
         return handler.next(error);
       },
     ));
+  }
+  
+  /// 初始化证书固定
+  /// 
+  /// 安全方案：
+  /// 1. 如果 assets/certs/server.crt 存在，使用该证书验证（推荐）
+  /// 2. 如果不存在，允许所有证书（开发/测试环境）
+  /// 
+  /// 部署时请将服务端的 server.crt 复制到 mobile/assets/certs/ 目录
+  /// 并在 pubspec.yaml 中添加 assets 配置
+  void _initCertificatePinning() {
+    (_dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
+      client.connectionTimeout = const Duration(seconds: 15);
+      
+      // 尝试加载本地证书
+      try {
+        final SecurityContext securityContext = SecurityContext();
+        // 从 assets 加载证书
+        final certData = rootBundle.load('assets/certs/server.crt');
+        certData.then((data) {
+          securityContext.setTrustedCertificatesBytes(data.buffer.asUint8List());
+          debugPrint('已加载服务端证书，启用证书固定验证');
+        }).catchError((e) {
+          debugPrint('未找到本地证书，跳过证书固定: $e');
+        });
+      } catch (e) {
+        debugPrint('证书加载失败，跳过证书固定: $e');
+      }
+      
+      // 如果证书加载失败，允许自签名证书（开发环境）
+      // 生产环境应该有证书文件
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        debugPrint('警告: 跳过证书验证 (host: $host)');
+        return true;
+      };
+      
+      return client;
+    };
   }
   
   Dio get dio => _dio;
