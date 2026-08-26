@@ -69,6 +69,8 @@ class Person {
   final String? disLevel;
   final String? dibao;
   final String? jisheng;
+  final String? tekun;
+  final String? tekunType;
   final String? socialCard1;
   final String? socialCard2;
   final String? socialCard3;
@@ -93,6 +95,8 @@ class Person {
     this.disLevel,
     this.dibao,
     this.jisheng,
+    this.tekun,
+    this.tekunType,
     this.socialCard1,
     this.socialCard2,
     this.socialCard3,
@@ -119,6 +123,8 @@ class Person {
       disLevel: json['dis_level'],
       dibao: json['dibao'],
       jisheng: json['jisheng'],
+      tekun: json['tekun'],
+      tekunType: json['tekun_type'],
       socialCard1: json['social_card1'],
       socialCard2: json['social_card2'],
       socialCard3: json['social_card3'],
@@ -147,6 +153,8 @@ class Person {
       'dis_level': disLevel,
       'dibao': dibao,
       'jisheng': jisheng,
+      'tekun': tekun,
+      'tekun_type': tekunType,
       'social_card1': socialCard1,
       'social_card2': socialCard2,
       'social_card3': socialCard3,

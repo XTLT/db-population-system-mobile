@@ -256,6 +256,10 @@ class _PersonDetailPageState extends State<PersonDetailPage>
             ],
             _buildInfoItem('低保', person.dibao),
             _buildInfoItem('是否计生家庭', person.jisheng),
+            _buildInfoItem('是否特困供养', person.tekun),
+            if (person.tekun == '是') ...[
+              _buildInfoItem('供养类型', person.tekunType),
+            ],
           ]),
 
           _buildInfoSection('社保卡信息', [

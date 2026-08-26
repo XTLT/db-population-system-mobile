@@ -388,6 +388,8 @@ class _PersonStatsTab extends StatelessWidget {
   Widget _buildSocialSecurityStats() {
     final disabilityCount = stats?['disability'] ?? 0;
     final dibaoCount = stats?['dibao'] ?? 0;
+    final tekunCount = stats?['tekun'] ?? 0;
+    final tekunTypeDistribution = stats?['tekun_type_distribution'] as Map<String, dynamic>? ?? {};
     
     return Card(
       child: Padding(
@@ -397,6 +399,27 @@ class _PersonStatsTab extends StatelessWidget {
             _buildStatRow('残疾人员', disabilityCount, Colors.red),
             const Divider(),
             _buildStatRow('低保人员', dibaoCount, Colors.orange),
+            const Divider(),
+            _buildStatRow('特困供养人员', tekunCount, Colors.purple),
+            if (tekunTypeDistribution.isNotEmpty) ...[
+              const Divider(),
+              Padding(
+                padding: const EdgeInsets.only(left: 28),
+                child: Column(
+                  children: tekunTypeDistribution.entries.map((entry) {
+                    final colors = {
+                      '集中供养': Colors.indigo,
+                      '散居特困': Colors.teal,
+                    };
+                    return _buildStatRow(
+                      '  ${entry.key}',
+                      entry.value as int,
+                      colors[entry.key] ?? Colors.grey,
+                    );
+                  }).toList(),
+                ),
+              ),
+            ],
           ],
         ),
       ),

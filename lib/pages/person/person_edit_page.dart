@@ -48,6 +48,8 @@ class _PersonEditPageState extends State<PersonEditPage> {
   String? _disLevel;
   String? _dibao;
   String? _jisheng;
+  String? _tekun;
+  String? _tekunType;
   
   String? _grade;
   String? _isLeftBehind;
@@ -92,6 +94,8 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _disLevel = widget.person?.disLevel;
     _dibao = widget.person?.dibao;
     _jisheng = widget.person?.jisheng;
+    _tekun = widget.person?.tekun;
+    _tekunType = widget.person?.tekunType;
     
     _grade = widget.person?.education?.grade;
     _isLeftBehind = widget.person?.education?.isLeftBehind;
@@ -305,6 +309,8 @@ class _PersonEditPageState extends State<PersonEditPage> {
         'dis_level': _disLevel,
         'dibao': _dibao,
         'jisheng': _jisheng,
+        'tekun': _tekun,
+        'tekun_type': _tekunType,
         'social_card1': _socialCard1Controller.text.trim(),
         'social_card2': _socialCard2Controller.text.trim(),
         'social_card3': _socialCard3Controller.text.trim(),
@@ -562,6 +568,31 @@ class _PersonEditPageState extends State<PersonEditPage> {
                         });
                       },
                     ),
+                    _buildDropdown(
+                      value: _tekun,
+                      label: '是否特困供养',
+                      items: const ['', '是', '否'],
+                      onChanged: (value) {
+                        setState(() {
+                          _tekun = value;
+                          if (value != '是') {
+                            _tekunType = null;
+                          }
+                        });
+                      },
+                    ),
+                    if (_tekun == '是') ...[
+                      _buildDropdown(
+                        value: _tekunType,
+                        label: '供养类型',
+                        items: const ['', '集中供养', '散居特困'],
+                        onChanged: (value) {
+                          setState(() {
+                            _tekunType = value;
+                          });
+                        },
+                      ),
+                    ],
                   ]),
                   
                   const SizedBox(height: 24),

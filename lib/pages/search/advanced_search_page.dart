@@ -23,6 +23,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
   
   String? _selectedDisability;
   String? _selectedDibao;
+  String? _selectedTekun;
+  String? _selectedTekunType;
   String? _selectedIsDead;
   
   
@@ -66,6 +68,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
     setState(() {
       _selectedDisability = params['disability'];
       _selectedDibao = params['dibao'];
+      _selectedTekun = params['tekun'];
+      _selectedTekunType = params['tekunType'];
       _selectedIsDead = params['isDead'];
     });
   }
@@ -91,6 +95,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
     setState(() {
       _selectedDisability = null;
       _selectedDibao = null;
+      _selectedTekun = null;
+      _selectedTekunType = null;
       _selectedIsDead = null;
     });
   }
@@ -134,6 +140,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                 'ageMax': _ageMaxController.text,
                 'disability': _selectedDisability,
                 'dibao': _selectedDibao,
+                'tekun': _selectedTekun,
+                'tekunType': _selectedTekunType,
                 'isDead': _selectedIsDead,
               });
               
@@ -166,6 +174,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
     setState(() {
       _selectedDisability = params['disability'];
       _selectedDibao = params['dibao'];
+      _selectedTekun = params['tekun'];
+      _selectedTekunType = params['tekunType'];
       _selectedIsDead = params['isDead'];
     });
   }
@@ -257,6 +267,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
         ageMax: _ageMaxController.text.isNotEmpty ? int.tryParse(_ageMaxController.text) : null,
         disability: _selectedDisability,
         dibao: _selectedDibao,
+        tekun: _selectedTekun,
+        tekunType: _selectedTekunType,
         isDead: _selectedIsDead,
       );
       
@@ -270,6 +282,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
         'ageMax': _ageMaxController.text,
         'disability': _selectedDisability,
         'dibao': _selectedDibao,
+        'tekun': _selectedTekun,
+        'tekunType': _selectedTekunType,
         'isDead': _selectedIsDead,
       });
       
@@ -614,6 +628,51 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                 });
               },
             ),
+            const SizedBox(height: 12),
+            
+            
+            DropdownButtonFormField<String>(
+              value: _selectedTekun,
+              decoration: const InputDecoration(
+                labelText: '特困供养',
+                border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.volunteer_activism),
+              ),
+              items: const [
+                DropdownMenuItem(value: null, child: Text('全部')),
+                DropdownMenuItem(value: '是', child: Text('是')),
+                DropdownMenuItem(value: '否', child: Text('否')),
+              ],
+              onChanged: (value) {
+                setState(() {
+                  _selectedTekun = value;
+                  if (value != '是') {
+                    _selectedTekunType = null;
+                  }
+                });
+              },
+            ),
+            if (_selectedTekun == '是') ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedTekunType,
+                decoration: const InputDecoration(
+                  labelText: '供养类型',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.home_work),
+                ),
+                items: const [
+                  DropdownMenuItem(value: null, child: Text('全部')),
+                  DropdownMenuItem(value: '集中供养', child: Text('集中供养')),
+                  DropdownMenuItem(value: '散居特困', child: Text('散居特困')),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedTekunType = value;
+                  });
+                },
+              ),
+            ],
             const SizedBox(height: 12),
             
             

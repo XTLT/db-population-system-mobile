@@ -40,6 +40,8 @@ class PersonApi {
     int? ageMax,
     String? disability,
     String? dibao,
+    String? tekun,
+    String? tekunType,
     String? isDead,
     int limit = 100,
   }) async {
@@ -53,6 +55,8 @@ class PersonApi {
         if (ageMax != null) 'age_max': ageMax,
         if (disability != null && disability.isNotEmpty) 'disability': disability,
         if (dibao != null && dibao.isNotEmpty) 'dibao': dibao,
+        if (tekun != null && tekun.isNotEmpty) 'tekun': tekun,
+        if (tekunType != null && tekunType.isNotEmpty) 'tekun_type': tekunType,
         if (isDead != null && isDead.isNotEmpty) 'is_dead': isDead,
         'limit': limit,
       });
