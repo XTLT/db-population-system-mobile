@@ -782,6 +782,7 @@ class _SubsidyStatsTab extends StatelessWidget {
 
   Widget _buildPoorStats() {
     final poorTypeDistribution = personStats?['poor_type_distribution'] as Map<String, dynamic>? ?? {};
+    final poorTypePersonCount = personStats?['poor_type_person_count'] as Map<String, dynamic>? ?? {};
 
     if (poorTypeDistribution.isEmpty) {
       return const Center(child: Text('暂无数据'));
@@ -820,12 +821,25 @@ class _SubsidyStatsTab extends StatelessWidget {
                       Text(entry.key),
                     ],
                   ),
-                  Text(
-                    '${entry.value} 户',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        '${entry.value} 户',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if ((poorTypePersonCount[entry.key] ?? 0) > 0)
+                        Text(
+                          '${poorTypePersonCount[entry.key]} 人',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
