@@ -6,6 +6,7 @@ import '../statistics/distribution_chart_page.dart';
 import '../statistics/radar_chart_page.dart';
 import '../report/custom_report_list_page.dart';
 import '../person/filtered_person_list_page.dart';
+import '../subsidy/monthly_payment_query_page.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -190,13 +191,13 @@ class _PersonStatsTab extends StatelessWidget {
           const SizedBox(height: 24),
           
           
-          _buildSection('社会保障', _buildSocialSecurityStats()),
+          _buildSection('社会保障', _buildSocialSecurityStats(context)),
           const SizedBox(height: 24),
 
-          _buildSection('脱贫户/监测户', _buildPoorStats()),
+          _buildSection('脱贫户/监测户', _buildPoorStats(context)),
           const SizedBox(height: 24),
 
-          _buildSection('残疾等级分布', _buildDisabilityLevelChart()),
+          _buildSection('残疾等级分布', _buildDisabilityLevelChart(context)),
         ],
       ),
     );
@@ -392,7 +393,7 @@ class _PersonStatsTab extends StatelessWidget {
     );
   }
   
-  Widget _buildSocialSecurityStats() {
+  Widget _buildSocialSecurityStats(BuildContext context) {
     final disabilityCount = stats?['disability'] ?? 0;
     final dibaoCount = stats?['dibao'] ?? 0;
     final tekunCount = stats?['tekun'] ?? 0;
@@ -486,7 +487,7 @@ class _PersonStatsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildPoorStats() {
+  Widget _buildPoorStats(BuildContext context) {
     final poorTypeDistribution = stats?['poor_type_distribution'] as Map<String, dynamic>? ?? {};
     final poorTypePersonCount = stats?['poor_type_person_count'] as Map<String, dynamic>? ?? {};
 
@@ -561,7 +562,7 @@ class _PersonStatsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildDisabilityLevelChart() {
+  Widget _buildDisabilityLevelChart(BuildContext context) {
     final disLevelDistribution = stats?['dis_level_distribution'] as Map<String, dynamic>? ?? {};
 
     if (disLevelDistribution.isEmpty) {
@@ -579,18 +580,18 @@ class _PersonStatsTab extends StatelessWidget {
       return aIndex.compareTo(bIndex);
     });
 
-    final gradientColors = [
-      [Colors.red.shade400, Colors.red.shade600],
-      [Colors.orange.shade400, Colors.orange.shade600],
-      [Colors.amber.shade400, Colors.amber.shade600],
-      [Colors.green.shade400, Colors.green.shade600],
+    final levelColors = [
+      Colors.red.shade400,
+      Colors.orange.shade400,
+      Colors.amber.shade600,
+      Colors.green.shade400,
     ];
 
     final barGroups = <BarChartGroupData>[];
     for (int i = 0; i < sortedLabels.length; i++) {
       final count = (disLevelDistribution[sortedLabels[i]] ?? 0).toDouble();
       final colorIndex = order.indexOf(sortedLabels[i]);
-      final colorPair = gradientColors[colorIndex >= 0 ? colorIndex : i % gradientColors.length];
+      final color = levelColors[colorIndex >= 0 ? colorIndex : i % levelColors.length];
 
       barGroups.add(
         BarChartGroupData(
@@ -598,15 +599,16 @@ class _PersonStatsTab extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: count,
-              gradient: LinearGradient(
-                colors: colorPair,
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-              ),
-              width: 50,
+              color: color,
+              width: 40,
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(6),
-                topRight: Radius.circular(6),
+                topLeft: Radius.circular(8),
+                topRight: Radius.circular(8),
+              ),
+              backDrawRodData: BackgroundBarChartRodData(
+                show: true,
+                toY: sortedLabels.map((k) => (disLevelDistribution[k] ?? 0).toDouble()).reduce((a, b) => a > b ? a : b) * 1.15,
+                color: Colors.grey.shade100,
               ),
             ),
           ],
@@ -615,17 +617,31 @@ class _PersonStatsTab extends StatelessWidget {
     }
 
     return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             SizedBox(
-              height: 200,
+              height: 220,
               child: BarChart(
                 BarChartData(
                   barGroups: barGroups,
+                  maxY: sortedLabels.map((k) => (disLevelDistribution[k] ?? 0).toDouble()).reduce((a, b) => a > b ? a : b) * 1.2,
                   titlesData: FlTitlesData(
-                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 40,
+                        getTitlesWidget: (value, meta) {
+                          if (value == value.roundToDouble()) {
+                            return Text('${value.toInt()}', style: TextStyle(fontSize: 11, color: Colors.grey.shade600));
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ),
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -634,7 +650,7 @@ class _PersonStatsTab extends StatelessWidget {
                           if (idx >= 0 && idx < sortedLabels.length) {
                             return Padding(
                               padding: const EdgeInsets.only(top: 8),
-                              child: Text(sortedLabels[idx], style: const TextStyle(fontSize: 12)),
+                              child: Text(sortedLabels[idx], style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
                             );
                           }
                           return const Text('');
@@ -645,32 +661,90 @@ class _PersonStatsTab extends StatelessWidget {
                     rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
                   ),
                   borderData: FlBorderData(show: false),
-                  gridData: const FlGridData(show: true),
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: (() {
+                      final maxVal = sortedLabels.map((k) => (disLevelDistribution[k] ?? 0).toDouble()).reduce((a, b) => a > b ? a : b);
+                      return maxVal > 0 ? (maxVal / 4).ceilToDouble().clamp(1, double.infinity) : 1;
+                    })(),
+                    getDrawingHorizontalLine: (value) => FlLine(
+                      color: Colors.grey.shade200,
+                      strokeWidth: 1,
+                    ),
+                  ),
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                        return BarTooltipItem(
+                          '${sortedLabels[group.x]}\n',
+                          const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                          children: [
+                            TextSpan(
+                              text: '${rod.toY.toInt()} 人',
+                              style: const TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 16,
-              children: sortedLabels.asMap().entries.map((e) {
-                final colorIndex = order.indexOf(e.value);
-                final colorPair = gradientColors[colorIndex >= 0 ? colorIndex : e.key % gradientColors.length];
-                return InkWell(
-                  onTap: () {
-                    Navigator.push(context, MaterialPageRoute(
-                      builder: (_) => FilteredPersonListPage(
-                        title: '残疾${e.value}',
-                        disability: '是',
+            const SizedBox(height: 16),
+            ...sortedLabels.asMap().entries.map((e) {
+              final colorIndex = order.indexOf(e.value);
+              final color = levelColors[colorIndex >= 0 ? colorIndex : e.key % levelColors.length];
+              final count = disLevelDistribution[e.value] ?? 0;
+              final total = disLevelDistribution.values.fold<int>(0, (sum, v) => sum + (v as int));
+              final pct = total > 0 ? (count as int) / total * 100 : 0;
+              return InkWell(
+                onTap: () {
+                  Navigator.push(context, MaterialPageRoute(
+                    builder: (_) => FilteredPersonListPage(
+                      title: '残疾${e.value}',
+                      disability: '是',
+                      disLevel: e.value,
+                    ),
+                  ));
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 12,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: color,
+                          borderRadius: BorderRadius.circular(3),
+                        ),
                       ),
-                    ));
-                  },
-                  child: Chip(
-                    avatar: CircleAvatar(backgroundColor: colorPair.last, radius: 6),
-                    label: Text('${e.value} ${disLevelDistribution[e.value]}人'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(e.value, style: const TextStyle(fontSize: 14)),
+                      ),
+                      Text(
+                        '$count 人',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 50,
+                        child: Text(
+                          '${pct.toStringAsFixed(1)}%',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                          textAlign: TextAlign.right,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
+                    ],
                   ),
-                );
-              }).toList(),
-            ),
+                ),
+              );
+            }),
           ],
         ),
       ),
@@ -918,11 +992,12 @@ class _SubsidyStatsTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
+          _buildSection('打款查询', _buildPaymentQueryEntry(context)),
+          const SizedBox(height: 24),
+
           _buildSection('地力补贴统计', _buildLandSubsidyStats()),
           const SizedBox(height: 24),
 
-          
           _buildSection('土地面积统计', _buildLandAreaStats()),
         ],
       ),
@@ -943,6 +1018,49 @@ class _SubsidyStatsTab extends StatelessWidget {
         const SizedBox(height: 12),
         child,
       ],
+    );
+  }
+
+  Widget _buildPaymentQueryEntry(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.blue.shade50,
+                child: Icon(Icons.account_balance_wallet, color: Colors.blue.shade700),
+              ),
+              title: const Text('待遇发放查询'),
+              subtitle: const Text('按月查询打款金额和打款卡号'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MonthlyPaymentQueryPage()),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.green.shade50,
+                child: Icon(Icons.elderly, color: Colors.green.shade700),
+              ),
+              title: const Text('养老保险查询'),
+              subtitle: const Text('按月查询打款金额和打款卡号'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MonthlyPaymentQueryPage()),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 

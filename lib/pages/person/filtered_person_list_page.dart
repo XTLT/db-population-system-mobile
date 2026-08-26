@@ -6,6 +6,7 @@ import '../person/person_detail_page.dart';
 class FilteredPersonListPage extends StatefulWidget {
   final String title;
   final String? disability;
+  final String? disLevel;
   final String? dibao;
   final String? tekun;
   final String? tekunType;
@@ -16,6 +17,7 @@ class FilteredPersonListPage extends StatefulWidget {
     super.key,
     required this.title,
     this.disability,
+    this.disLevel,
     this.dibao,
     this.tekun,
     this.tekunType,
@@ -46,6 +48,7 @@ class _FilteredPersonListPageState extends State<FilteredPersonListPage> {
     try {
       final persons = await PersonApi.searchAdvanced(
         disability: widget.disability,
+        disLevel: widget.disLevel,
         dibao: widget.dibao,
         tekun: widget.tekun,
         tekunType: widget.tekunType,
@@ -94,7 +97,7 @@ class _FilteredPersonListPageState extends State<FilteredPersonListPage> {
                         itemBuilder: (context, index) {
                           final p = _persons[index];
                           return ListTile(
-                            title: Text(p.name),
+                            title: Text(p.name ?? ''),
                             subtitle: Text(
                               '${p.idCard ?? ''}  ${p.address ?? ''}',
                               maxLines: 1,

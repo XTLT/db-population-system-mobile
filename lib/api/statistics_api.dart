@@ -205,4 +205,76 @@ class StatisticsApi {
       throw Exception('获取养老保险年份数据失败: $e');
     }
   }
+
+  /// 获取待遇发放可用月份列表
+  static Future<List<String>> getTreatmentPaymentPeriods() async {
+    try {
+      final response = await _dio.get('/api/treatment_payment/periods');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['periods'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 获取养老保险可用月份列表
+  static Future<List<String>> getPensionInsurancePeriods() async {
+    try {
+      final response = await _dio.get('/api/pension_insurance/periods');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['periods'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 查询待遇发放记录（按月份+身份证号/姓名）
+  static Future<List<Map<String, dynamic>>> queryTreatmentPayments({
+    String? period,
+    String? idCard,
+    String? name,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
+      if (name != null && name.isNotEmpty) queryParams['name'] = name;
+
+      final response = await _dio.get('/api/treatment_payment', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['payments'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 查询养老保险记录（按月份+身份证号/姓名）
+  static Future<List<Map<String, dynamic>>> queryPensionInsurance({
+    String? period,
+    String? idCard,
+    String? name,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
+      if (name != null && name.isNotEmpty) queryParams['name'] = name;
+
+      final response = await _dio.get('/api/pension_insurance', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['records'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 }
