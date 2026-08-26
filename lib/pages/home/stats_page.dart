@@ -5,6 +5,7 @@ import '../statistics/trend_chart_page.dart';
 import '../statistics/distribution_chart_page.dart';
 import '../statistics/radar_chart_page.dart';
 import '../report/custom_report_list_page.dart';
+import '../person/filtered_person_list_page.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -190,6 +191,12 @@ class _PersonStatsTab extends StatelessWidget {
           
           
           _buildSection('社会保障', _buildSocialSecurityStats()),
+          const SizedBox(height: 24),
+
+          _buildSection('脱贫户/监测户', _buildPoorStats()),
+          const SizedBox(height: 24),
+
+          _buildSection('残疾等级分布', _buildDisabilityLevelChart()),
         ],
       ),
     );
@@ -396,11 +403,23 @@ class _PersonStatsTab extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            _buildStatRow('残疾人员', disabilityCount, Colors.red),
+            _buildStatRow('残疾人员', disabilityCount, Colors.red, onTap: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const FilteredPersonListPage(title: '残疾人员', disability: '是'),
+              ));
+            }),
             const Divider(),
-            _buildStatRow('低保人员', dibaoCount, Colors.orange),
+            _buildStatRow('低保人员', dibaoCount, Colors.orange, onTap: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '最低生活保障家庭'),
+              ));
+            }),
             const Divider(),
-            _buildStatRow('特困供养人员', tekunCount, Colors.purple),
+            _buildStatRow('特困供养人员', tekunCount, Colors.purple, onTap: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const FilteredPersonListPage(title: '特困供养人员', tekun: '是'),
+              ));
+            }),
             if (tekunTypeDistribution.isNotEmpty) ...[
               const Divider(),
               Padding(
@@ -415,6 +434,11 @@ class _PersonStatsTab extends StatelessWidget {
                       '  ${entry.key}',
                       entry.value as int,
                       colors[entry.key] ?? Colors.grey,
+                      onTap: () {
+                        Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => FilteredPersonListPage(title: entry.key, tekun: '是', tekunType: entry.key),
+                        ));
+                      },
                     );
                   }).toList(),
                 ),
@@ -426,15 +450,17 @@ class _PersonStatsTab extends StatelessWidget {
     );
   }
   
-  Widget _buildStatRow(String label, int count, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
+  Widget _buildStatRow(String label, int count, Color color, {VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
                 width: 16,
                 height: 16,
                 decoration: BoxDecoration(
@@ -455,6 +481,198 @@ class _PersonStatsTab extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    ),
+    );
+  }
+
+  Widget _buildPoorStats() {
+    final poorTypeDistribution = stats?['poor_type_distribution'] as Map<String, dynamic>? ?? {};
+    final poorTypePersonCount = stats?['poor_type_person_count'] as Map<String, dynamic>? ?? {};
+
+    if (poorTypeDistribution.isEmpty) {
+      return const Center(child: Text('暂无数据'));
+    }
+
+    final colors = {
+      '脱贫户': Colors.green,
+      '脱贫不稳定户': Colors.teal,
+      '边缘易致贫户': Colors.orange,
+      '突发严重困难户': Colors.red,
+      '监测户': Colors.orange,
+      '其他': Colors.blue,
+    };
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: poorTypeDistribution.entries.map((entry) {
+            return InkWell(
+              onTap: () {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => FilteredPersonListPage(
+                    title: '${entry.key}户主',
+                    poorType: entry.key,
+                    relation: '户主',
+                  ),
+                ));
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 16,
+                          height: 16,
+                          decoration: BoxDecoration(
+                            color: colors[entry.key] ?? Colors.grey,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(entry.key),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          '${entry.value} 户',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        if ((poorTypePersonCount[entry.key] ?? 0) > 0)
+                          Text(
+                            '${poorTypePersonCount[entry.key]} 人',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDisabilityLevelChart() {
+    final disLevelDistribution = stats?['dis_level_distribution'] as Map<String, dynamic>? ?? {};
+
+    if (disLevelDistribution.isEmpty) {
+      return const Center(child: Text('暂无数据'));
+    }
+
+    final order = ['一级', '二级', '三级', '四级'];
+    final sortedLabels = List<String>.from(disLevelDistribution.keys.toList());
+    sortedLabels.sort((a, b) {
+      final aIndex = order.indexOf(a);
+      final bIndex = order.indexOf(b);
+      if (aIndex == -1 && bIndex == -1) return a.compareTo(b);
+      if (aIndex == -1) return 1;
+      if (bIndex == -1) return -1;
+      return aIndex.compareTo(bIndex);
+    });
+
+    final gradientColors = [
+      [Colors.red.shade400, Colors.red.shade600],
+      [Colors.orange.shade400, Colors.orange.shade600],
+      [Colors.amber.shade400, Colors.amber.shade600],
+      [Colors.green.shade400, Colors.green.shade600],
+    ];
+
+    final barGroups = <BarChartGroupData>[];
+    for (int i = 0; i < sortedLabels.length; i++) {
+      final count = (disLevelDistribution[sortedLabels[i]] ?? 0).toDouble();
+      final colorIndex = order.indexOf(sortedLabels[i]);
+      final colorPair = gradientColors[colorIndex >= 0 ? colorIndex : i % gradientColors.length];
+
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(
+              toY: count,
+              gradient: LinearGradient(
+                colors: colorPair,
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+              ),
+              width: 50,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(6),
+                topRight: Radius.circular(6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            SizedBox(
+              height: 200,
+              child: BarChart(
+                BarChartData(
+                  barGroups: barGroups,
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          final idx = value.toInt();
+                          if (idx >= 0 && idx < sortedLabels.length) {
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(sortedLabels[idx], style: const TextStyle(fontSize: 12)),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  gridData: const FlGridData(show: true),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              children: sortedLabels.asMap().entries.map((e) {
+                final colorIndex = order.indexOf(e.value);
+                final colorPair = gradientColors[colorIndex >= 0 ? colorIndex : e.key % gradientColors.length];
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(
+                      builder: (_) => FilteredPersonListPage(
+                        title: '残疾${e.value}',
+                        disability: '是',
+                      ),
+                    ));
+                  },
+                  child: Chip(
+                    avatar: CircleAvatar(backgroundColor: colorPair.last, radius: 6),
+                    label: Text('${e.value} ${disLevelDistribution[e.value]}人'),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -705,14 +923,6 @@ class _SubsidyStatsTab extends StatelessWidget {
           const SizedBox(height: 24),
 
           
-          _buildSection('脱贫户/监测户', _buildPoorStats()),
-          const SizedBox(height: 24),
-
-          
-          _buildSection('残疾等级分布', _buildDisabilityLevelChart()),
-          const SizedBox(height: 24),
-
-          
           _buildSection('土地面积统计', _buildLandAreaStats()),
         ],
       ),
@@ -803,265 +1013,6 @@ class _SubsidyStatsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildPoorStats() {
-    final poorTypeDistribution = personStats?['poor_type_distribution'] as Map<String, dynamic>? ?? {};
-    final poorTypePersonCount = personStats?['poor_type_person_count'] as Map<String, dynamic>? ?? {};
-
-    if (poorTypeDistribution.isEmpty) {
-      return const Center(child: Text('暂无数据'));
-    }
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: poorTypeDistribution.entries.map((entry) {
-            final colors = {
-              '脱贫户': Colors.green,
-              '脱贫不稳定户': Colors.teal,
-              '边缘易致贫户': Colors.orange,
-              '突发严重困难户': Colors.red,
-              '监测户': Colors.orange,
-              '其他': Colors.blue,
-            };
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: colors[entry.key] ?? Colors.grey,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(entry.key),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${entry.value} 户',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if ((poorTypePersonCount[entry.key] ?? 0) > 0)
-                        Text(
-                          '${poorTypePersonCount[entry.key]} 人',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDisabilityLevelChart() {
-    final disLevelDistribution = personStats?['dis_level_distribution'] as Map<String, dynamic>? ?? {};
-
-    if (disLevelDistribution.isEmpty) {
-      return const Center(child: Text('暂无数据'));
-    }
-
-    
-    final order = ['一级', '二级', '三级', '四级'];
-    final sortedLabels = List<String>.from(disLevelDistribution.keys.toList());
-    sortedLabels.sort((a, b) {
-      final aIndex = order.indexOf(a);
-      final bIndex = order.indexOf(b);
-      if (aIndex == -1 && bIndex == -1) return a.compareTo(b);
-      if (aIndex == -1) return 1;
-      if (bIndex == -1) return -1;
-      return aIndex.compareTo(bIndex);
-    });
-
-    
-    final gradientColors = [
-      [Colors.red.shade400, Colors.red.shade600],      
-      [Colors.orange.shade400, Colors.orange.shade600], 
-      [Colors.amber.shade400, Colors.amber.shade600],   
-      [Colors.green.shade400, Colors.green.shade600],   
-    ];
-
-    final barGroups = <BarChartGroupData>[];
-    for (int i = 0; i < sortedLabels.length; i++) {
-      final count = (disLevelDistribution[sortedLabels[i]] ?? 0).toDouble();
-      final colorIndex = order.indexOf(sortedLabels[i]);
-      final colorPair = gradientColors[colorIndex >= 0 ? colorIndex : i % gradientColors.length];
-
-      barGroups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: count,
-              gradient: LinearGradient(
-                colors: colorPair,
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-              ),
-              width: 50,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(6),
-                topRight: Radius.circular(6),
-              ),
-              backDrawRodData: BackgroundBarChartRodData(
-                show: true,
-                toY: disLevelDistribution.values.map((v) => (v as num).toDouble()).reduce((a, b) => a > b ? a : b) * 1.2,
-                color: Colors.grey.shade200,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    
-    final total = disLevelDistribution.values.fold<int>(0, (sum, v) => sum + (v as int));
-
-    return Column(
-      children: [
-        SizedBox(
-          height: 220,
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceEvenly,
-              titlesData: FlTitlesData(
-                show: true,
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (value, meta) {
-                      if (value.toInt() >= sortedLabels.length) {
-                        return const Text('');
-                      }
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          sortedLabels[value.toInt()],
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    },
-                    reservedSize: 36,
-                  ),
-                ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    reservedSize: 40,
-                    getTitlesWidget: (value, meta) {
-                      if (value == 0 || value % 10 != 0) {
-                        return const Text('');
-                      }
-                      return Text(
-                        value.toInt().toString(),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade600,
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                topTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: const AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              barGroups: barGroups,
-              gridData: FlGridData(
-                show: true,
-                drawVerticalLine: false,
-                horizontalInterval: 10,
-                getDrawingHorizontalLine: (value) {
-                  return FlLine(
-                    color: Colors.grey.shade200,
-                    strokeWidth: 1,
-                  );
-                },
-              ),
-              barTouchData: BarTouchData(
-                touchTooltipData: BarTouchTooltipData(
-                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                    final label = sortedLabels[groupIndex];
-                    final count = disLevelDistribution[label] ?? 0;
-                    final percent = total > 0 ? (count / total * 100).toStringAsFixed(1) : '0';
-                    return BarTooltipItem(
-                      '$label: $count人 ($percent%)',
-                      TextStyle(
-                        color: Colors.grey.shade800,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        
-        Wrap(
-          spacing: 16,
-          runSpacing: 8,
-          children: sortedLabels.asMap().entries.map((entry) {
-            final colorIndex = order.indexOf(entry.value);
-            final colorPair = gradientColors[colorIndex >= 0 ? colorIndex : entry.key % gradientColors.length];
-            final count = disLevelDistribution[entry.value] ?? 0;
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: colorPair,
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  '${entry.value}: $count人',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-              ],
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
 
   Widget _buildLandAreaStats() {
     final totalLandArea = personStats?['total_land_area'] ?? 0;

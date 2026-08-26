@@ -42,6 +42,8 @@ class PersonApi {
     String? dibao,
     String? tekun,
     String? tekunType,
+    String? poorType,
+    String? relation,
     String? isDead,
     int limit = 100,
   }) async {
@@ -57,6 +59,8 @@ class PersonApi {
         if (dibao != null && dibao.isNotEmpty) 'dibao': dibao,
         if (tekun != null && tekun.isNotEmpty) 'tekun': tekun,
         if (tekunType != null && tekunType.isNotEmpty) 'tekun_type': tekunType,
+        if (poorType != null && poorType.isNotEmpty) 'poor_type': poorType,
+        if (relation != null && relation.isNotEmpty) 'relation': relation,
         if (isDead != null && isDead.isNotEmpty) 'is_dead': isDead,
         'limit': limit,
       });
