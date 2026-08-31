@@ -45,7 +45,7 @@ class BackupApi {
       final response = await _dio.post(
         '/api/backup/restore',
         data: {
-          'path': backupPath,
+          'name': backupPath,
           if (password != null && password.isNotEmpty) 'password': password,
         },
       );
@@ -63,7 +63,7 @@ class BackupApi {
   
   static Future<Map<String, dynamic>> getBackupStatus() async {
     try {
-      final response = await _dio.get('/api/backup/download');
+      final response = await _dio.get('/api/backup/status');
 
       if (response.statusCode == 200) {
         return response.data;

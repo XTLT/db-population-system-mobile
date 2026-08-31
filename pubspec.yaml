@@ -3,7 +3,7 @@ description: 人口信息查询系统移动端
 
 publish_to: 'none'
 
-version: 0.0.1+1
+version: 0.0.5+5
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -63,6 +63,12 @@ dependencies:
   
   # 加密库（用于密码哈希等）
   crypto: ^3.0.3
+
+  # 应用信息
+  package_info_plus: ^8.0.0
+  
+  # URL打开
+  url_launcher: ^6.1.0
 
   cupertino_icons: ^1.0.8
 

@@ -5,6 +5,7 @@ import '../../api/person_api.dart';
 import '../../utils/validators.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_data_service.dart';
+import '../../api/api_client.dart';
 
 class PersonEditPage extends StatefulWidget {
   final Person? person; 
@@ -395,6 +396,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
 
       if (success && mounted) {
         debugPrint('========== 保存成功，返回 true ==========');
+        // 清除统计缓存，确保统计数据及时更新
+        ApiClient().invalidatePath('GET', '/api/statistics');
+        ApiClient().invalidatePath('GET', '/api/students/statistics');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(widget.person == null ? '添加成功' : '保存成功')),
         );

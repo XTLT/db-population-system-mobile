@@ -277,4 +277,102 @@ class StatisticsApi {
       return [];
     }
   }
+
+  /// 获取低保发放可用月份列表
+  static Future<List<String>> getDibaoPaymentPeriods() async {
+    try {
+      final response = await _dio.get('/api/dibao_payment/periods');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['periods'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 获取特困发放可用月份列表
+  static Future<List<String>> getTekunPaymentPeriods() async {
+    try {
+      final response = await _dio.get('/api/tekun_payment/periods');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['periods'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 查询低保发放记录（按月份+身份证号/姓名）
+  static Future<List<Map<String, dynamic>>> queryDibaoPayments({
+    String? period,
+    String? idCard,
+    String? name,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
+      if (name != null && name.isNotEmpty) queryParams['name'] = name;
+
+      final response = await _dio.get('/api/dibao_payment', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['records'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 查询特困发放记录（按月份+身份证号/姓名）
+  static Future<List<Map<String, dynamic>>> queryTekunPayments({
+    String? period,
+    String? idCard,
+    String? name,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
+      if (name != null && name.isNotEmpty) queryParams['name'] = name;
+
+      final response = await _dio.get('/api/tekun_payment', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['records'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 获取低保发放统计
+  static Future<Map<String, dynamic>> getDibaoPaymentStatistics() async {
+    try {
+      final response = await _dio.get('/api/dibao_payment/statistics');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('获取低保统计失败');
+    } catch (e) {
+      throw Exception('获取低保统计失败: $e');
+    }
+  }
+
+  /// 获取特困发放统计
+  static Future<Map<String, dynamic>> getTekunPaymentStatistics() async {
+    try {
+      final response = await _dio.get('/api/tekun_payment/statistics');
+      if (response.statusCode == 200) {
+        return response.data;
+      }
+      throw Exception('获取特困统计失败');
+    } catch (e) {
+      throw Exception('获取特困统计失败: $e');
+    }
+  }
 }

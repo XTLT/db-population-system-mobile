@@ -20,7 +20,7 @@ class BackupInfo {
     return BackupInfo(
       timestamp: json['timestamp'] ?? '',
       time: json['time'] ?? '',
-      path: json['path'] ?? '',
+      path: json['name'] ?? '',
       size: json['size'] ?? 0,
       encrypted: json['encrypted'] ?? false,
       manual: json['manual'] ?? false,

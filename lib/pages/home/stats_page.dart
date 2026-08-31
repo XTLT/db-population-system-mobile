@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../../api/api_client.dart';
 import '../../api/statistics_api.dart';
 import '../statistics/trend_chart_page.dart';
 import '../statistics/distribution_chart_page.dart';
@@ -7,6 +8,8 @@ import '../statistics/radar_chart_page.dart';
 import '../report/custom_report_list_page.dart';
 import '../person/filtered_person_list_page.dart';
 import '../subsidy/monthly_payment_query_page.dart';
+import '../subsidy/dibao_query_page.dart';
+import '../subsidy/tekun_query_page.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -143,7 +146,11 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: _isLoading ? null : _loadStatistics,
+            onPressed: _isLoading ? null : () async {
+              // 清除缓存后重新加载，确保获取最新数据
+              await ApiClient().clearCache();
+              _loadStatistics();
+            },
           ),
         ],
         bottom: TabBar(
@@ -704,7 +711,6 @@ class _PersonStatsTab extends StatelessWidget {
                   Navigator.push(context, MaterialPageRoute(
                     builder: (_) => FilteredPersonListPage(
                       title: '残疾${e.value}',
-                      disability: '是',
                       disLevel: e.value,
                     ),
                   ));
@@ -1029,16 +1035,32 @@ class _SubsidyStatsTab extends StatelessWidget {
           children: [
             ListTile(
               leading: CircleAvatar(
-                backgroundColor: Colors.blue.shade50,
-                child: Icon(Icons.account_balance_wallet, color: Colors.blue.shade700),
+                backgroundColor: Colors.orange.shade50,
+                child: Icon(Icons.health_and_safety, color: Colors.orange.shade700),
               ),
-              title: const Text('待遇发放查询'),
-              subtitle: const Text('按月查询打款金额和打款卡号'),
+              title: const Text('低保发放查询'),
+              subtitle: const Text('按月查询低保打款金额和卡号'),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const MonthlyPaymentQueryPage()),
+                  MaterialPageRoute(builder: (_) => const DibaoQueryPage()),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.teal.shade50,
+                child: Icon(Icons.volunteer_activism, color: Colors.teal.shade700),
+              ),
+              title: const Text('特困发放查询'),
+              subtitle: const Text('按月查询特困打款金额和卡号'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const TekunQueryPage()),
                 );
               },
             ),

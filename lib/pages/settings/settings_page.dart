@@ -10,6 +10,8 @@ import '../backup/backup_management_page.dart';
 import '../data/data_management_page.dart';
 import '../user/user_management_page.dart';
 import '../notification/send_notification_page.dart';
+import '../../widgets/update_dialog.dart';
+import '../../services/update_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -507,6 +509,27 @@ class _SettingsPageState extends State<SettingsPage> {
                   leading: const Icon(Icons.verified),
                   title: const Text('版本'),
                   subtitle: Text(AppConfig.appVersion),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.system_update),
+                  title: const Text('检查更新'),
+                  subtitle: const Text('检查是否有新版本可用'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () async {
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    final updateInfo = await UpdateService().checkUpdate();
+                    if (!mounted) return;
+                    if (updateInfo != null && updateInfo.hasUpdate) {
+                      showDialog(
+                        context: context,
+                        builder: (_) => UpdateDialog(updateInfo: updateInfo),
+                      );
+                    } else {
+                      scaffoldMessenger.showSnackBar(
+                        const SnackBar(content: Text('当前已是最新版本')),
+                      );
+                    }
+                  },
                 ),
               ],
             ),
