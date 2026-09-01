@@ -1,6 +1,5 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/update_service.dart';
 
 class UpdateDialog extends StatefulWidget {
@@ -49,27 +48,15 @@ class _UpdateDialogState extends State<UpdateDialog> {
   }
 
   Future<void> _startDownload() async {
-    // 如果是外部URL，在浏览器中打开
-    if (widget.updateInfo.isExternalUrl && widget.updateInfo.downloadUrl != null) {
-      final url = Uri.parse(widget.updateInfo.downloadUrl!);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('已在浏览器中打开下载页面，请手动安装APK')),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('无法打开下载链接')),
-          );
-        }
+    if (widget.updateInfo.downloadUrl == null || widget.updateInfo.downloadUrl!.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('下载链接不可用，请手动下载安装')),
+        );
       }
       return;
     }
 
-    // 内部URL，直接下载
     setState(() {
       _downloading = true;
       _progress = 0;
@@ -90,7 +77,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
       } else {
         setState(() => _downloading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('下载或安装失败，请手动下载安装')),
+          const SnackBar(
+            content: Text('下载或安装失败，请手动下载安装'),
+            duration: Duration(seconds: 5),
+          ),
         );
       }
     }

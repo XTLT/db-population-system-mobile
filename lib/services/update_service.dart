@@ -92,32 +92,23 @@ class UpdateService {
 
       String downloadUrl = updateInfo.downloadUrl!;
       
-      // 如果是外部URL（Gitee），直接使用
       // 如果是相对路径，拼接baseUrl
       if (!downloadUrl.startsWith('http')) {
         final baseUrl = _dio.options.baseUrl;
         downloadUrl = '$baseUrl$downloadUrl';
       }
 
-      // 获取认证token（如果是内部URL需要）
-      final token = _dio.options.headers['Authorization'] ?? '';
-
-      final downloadDio = Dio();
-      
-      // 对于外部URL，可能不需要认证
-      Map<String, dynamic> headers = {};
-      if (!updateInfo.isExternalUrl && token.isNotEmpty) {
-        headers['Authorization'] = token;
-      }
+      final downloadDio = Dio(BaseOptions(
+        followRedirects: true,
+        maxRedirects: 10,
+        receiveTimeout: const Duration(minutes: 30),
+        headers: {'User-Agent': 'PopulationApp/1.0'},
+      ));
 
       await downloadDio.download(
         downloadUrl,
         filePath,
         cancelToken: cancelToken,
-        options: Options(
-          headers: headers,
-          receiveTimeout: const Duration(minutes: 30),
-        ),
         onReceiveProgress: (received, total) {
           if (total > 0 && onProgress != null) {
             onProgress(received / total);

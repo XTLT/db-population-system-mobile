@@ -3,7 +3,7 @@ description: 人口信息查询系统移动端
 
 publish_to: 'none'
 
-version: 0.0.5+5
+version: 0.0.6+6
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
