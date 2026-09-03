@@ -33,10 +33,8 @@ class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
   Future<void> _loadPeriods() async {
     final periods = await StatisticsApi.getPensionInsurancePeriods();
     setState(() {
-      _periods = periods;
-      if (periods.isNotEmpty && (_selectedPeriod == null || !periods.contains(_selectedPeriod))) {
-        _selectedPeriod = periods.first;
-      }
+      _periods = ['全部', ...periods];
+      _selectedPeriod = '全部';
     });
   }
 

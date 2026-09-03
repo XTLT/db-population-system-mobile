@@ -33,10 +33,8 @@ class _DibaoQueryPageState extends State<DibaoQueryPage> {
   Future<void> _loadPeriods() async {
     final periods = await StatisticsApi.getDibaoPaymentPeriods();
     setState(() {
-      _periods = periods;
-      if (periods.isNotEmpty && (_selectedPeriod == null || !periods.contains(_selectedPeriod))) {
-        _selectedPeriod = periods.first;
-      }
+      _periods = ['全部', ...periods];
+      _selectedPeriod = '全部';
     });
   }
 

@@ -240,7 +240,7 @@ class StatisticsApi {
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
       if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
       if (name != null && name.isNotEmpty) queryParams['name'] = name;
 
@@ -263,7 +263,7 @@ class StatisticsApi {
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
       if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
       if (name != null && name.isNotEmpty) queryParams['name'] = name;
 
@@ -312,7 +312,7 @@ class StatisticsApi {
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
       if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
       if (name != null && name.isNotEmpty) queryParams['name'] = name;
 
@@ -335,7 +335,7 @@ class StatisticsApi {
   }) async {
     try {
       final queryParams = <String, dynamic>{};
-      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
       if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
       if (name != null && name.isNotEmpty) queryParams['name'] = name;
 
