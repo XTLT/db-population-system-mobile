@@ -9,7 +9,6 @@ class MonthlyPaymentQueryPage extends StatefulWidget {
 }
 
 class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
-  String _queryType = 'treatment'; // treatment / pension
   String? _selectedPeriod;
   final TextEditingController _idCardController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
@@ -32,9 +31,7 @@ class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
   }
 
   Future<void> _loadPeriods() async {
-    final periods = _queryType == 'treatment'
-        ? await StatisticsApi.getTreatmentPaymentPeriods()
-        : await StatisticsApi.getPensionInsurancePeriods();
+    final periods = await StatisticsApi.getPensionInsurancePeriods();
     setState(() {
       _periods = periods;
       if (periods.isNotEmpty && (_selectedPeriod == null || !periods.contains(_selectedPeriod))) {
@@ -58,19 +55,11 @@ class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
 
     try {
       List<Map<String, dynamic>> results;
-      if (_queryType == 'treatment') {
-        results = await StatisticsApi.queryTreatmentPayments(
-          period: _selectedPeriod,
-          idCard: _idCardController.text.trim(),
-          name: _nameController.text.trim(),
-        );
-      } else {
-        results = await StatisticsApi.queryPensionInsurance(
-          period: _selectedPeriod,
-          idCard: _idCardController.text.trim(),
-          name: _nameController.text.trim(),
-        );
-      }
+      results = await StatisticsApi.queryPensionInsurance(
+        period: _selectedPeriod,
+        idCard: _idCardController.text.trim(),
+        name: _nameController.text.trim(),
+      );
       setState(() {
         _results = results;
         _isLoading = false;
@@ -92,7 +81,7 @@ class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('打款查询'),
+        title: const Text('养老保险查询'),
       ),
       body: Column(
         children: [
@@ -111,24 +100,6 @@ class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 查询类型切换
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: 'treatment', label: Text('待遇发放')),
-                ButtonSegment(value: 'pension', label: Text('养老保险')),
-              ],
-              selected: {_queryType},
-              onSelectionChanged: (Set<String> selected) {
-                setState(() {
-                  _queryType = selected.first;
-                  _selectedPeriod = null;
-                  _results = [];
-                  _hasSearched = false;
-                });
-                _loadPeriods();
-              },
-            ),
-            const SizedBox(height: 16),
             // 月份选择
             DropdownButtonFormField<String>(
               value: _selectedPeriod,
