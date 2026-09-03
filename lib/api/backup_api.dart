@@ -23,7 +23,7 @@ class BackupApi {
   
   static Future<List<BackupInfo>> getBackupList() async {
     try {
-      final response = await _dio.get('/api/backups');
+      final response = await _dio.get('/api/backup/list');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['backups'] ?? [];
