@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../config/app_config.dart';
 import '../services/network_cache.dart';
+import '../services/domain_service.dart';
+import '../services/connectivity_service.dart';
 
 class ApiClient {
   static final ApiClient _instance = ApiClient._internal();
@@ -12,7 +14,8 @@ class ApiClient {
   
   late Dio _dio;
   String? _token;
-  
+  String? _effectiveBaseUrl; // 回退成功后缓存，避免每次请求都重试
+
   final Map<String, int> _activeRequests = {};
   static const int _maxConcurrentRequests = 20;  
   
@@ -22,7 +25,7 @@ class ApiClient {
   ApiClient._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 15),
+      connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 15),
       sendTimeout: const Duration(seconds: 15),
       headers: {
@@ -34,6 +37,14 @@ class ApiClient {
     _initCertificatePinning();
     
     debugPrint('ApiClient 初始化，baseUrl: ${AppConfig.apiBaseUrl}');
+    
+    // 网络切换时重置有效 URL，重新探测最优路径
+    ConnectivityService().onConnectivityChanged.listen((_) {
+      if (_effectiveBaseUrl != null) {
+        debugPrint('网络变化，重置 effectiveBaseUrl');
+        _effectiveBaseUrl = null;
+      }
+    });
     
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
@@ -56,7 +67,7 @@ class ApiClient {
           options.headers['Authorization'] = 'Bearer $_token';
         }
         
-        options.baseUrl = AppConfig.apiBaseUrl;
+        options.baseUrl = AppConfig.normalizeUrl(_effectiveBaseUrl ?? AppConfig.apiBaseUrl);
         
         if (NetworkCache.shouldCache(options.method, options.path)) {
           final cacheKey = NetworkCache.generateKey(
@@ -134,7 +145,42 @@ class ApiClient {
         
         if (error.type == DioExceptionType.connectionError ||
             error.type == DioExceptionType.connectionTimeout) {
-          
+
+          // 1. 尝试链路本地 IPv6（WiFi 场景：手机和服务器在同一局域网，
+          //    但手机只有内网 IPv6，无法路由到服务器的全局 IPv6）
+          if (error.requestOptions.extra['linklocal_tried'] != true) {
+            error.requestOptions.extra['linklocal_tried'] = true;
+            final linkLocalUrl = await DomainService.resolveLinkLocalIPv6(AppConfig.apiBaseUrl);
+            if (linkLocalUrl != null) {
+              error.requestOptions.baseUrl = linkLocalUrl;
+              error.requestOptions.extra['retry_count'] = 0;
+              try {
+                final response = await _dio.fetch(error.requestOptions);
+                _effectiveBaseUrl = linkLocalUrl;
+                debugPrint('链路本地 IPv6 连接成功，缓存为 effectiveBaseUrl: $linkLocalUrl');
+                return handler.resolve(response);
+              } catch (_) {}
+            }
+          }
+
+          // 2. 尝试 IPv4 解析
+          if (error.requestOptions.extra['ipv4_tried'] != true) {
+            error.requestOptions.extra['ipv4_tried'] = true;
+            final ipv4Url = await _resolveToIPv4(AppConfig.apiBaseUrl);
+            if (ipv4Url != null) {
+              error.requestOptions.baseUrl = ipv4Url;
+              error.requestOptions.extra['retry_count'] = 0;
+              try {
+                final response = await _dio.fetch(error.requestOptions);
+                _effectiveBaseUrl = ipv4Url;
+                debugPrint('IPv4 连接成功，缓存为 effectiveBaseUrl: $ipv4Url');
+                return handler.resolve(response);
+              } catch (e) {
+              }
+            }
+          }
+
+          // 3. 尝试备用域名
           final newDomain = await _tryBackupDomain();
           if (newDomain != null) {
             
@@ -143,6 +189,8 @@ class ApiClient {
             
             try {
               final response = await _dio.fetch(error.requestOptions);
+              _effectiveBaseUrl = newDomain;
+              debugPrint('备用域名连接成功，缓存为 effectiveBaseUrl: $newDomain');
               return handler.resolve(response);
             } catch (e) {
               
@@ -203,6 +251,11 @@ class ApiClient {
     _token = null;
   }
   
+  /// 重置有效 URL 缓存，下次请求将重新探测最优连接路径
+  void resetEffectiveBaseUrl() {
+    _effectiveBaseUrl = null;
+  }
+  
   
   Future<void> clearCache() async {
     await NetworkCache().clear();
@@ -218,10 +271,24 @@ class ApiClient {
   bool _shouldRetry(DioException error) {
     return error.type == DioExceptionType.connectionTimeout ||
            error.type == DioExceptionType.sendTimeout ||
-           error.type == DioExceptionType.receiveTimeout ||
-           error.type == DioExceptionType.connectionError;
+           error.type == DioExceptionType.receiveTimeout;
   }
   
+  Future<String?> _resolveToIPv4(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (uri.host.isEmpty) return null;
+      final addresses = await InternetAddress.lookup(
+        uri.host,
+        type: InternetAddressType.IPv4,
+      ).timeout(const Duration(seconds: 3));
+      if (addresses.isNotEmpty) {
+        return url.replaceFirst(uri.host, addresses.first.address);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<String?> _tryBackupDomain() async {
     for (final url in AppConfig.backupUrls) {
       if (await _checkDomain(url)) {
@@ -234,12 +301,15 @@ class ApiClient {
   
   Future<bool> _checkDomain(String url) async {
     try {
-      final response = await Dio().get(
-        '$url/api/health',
-        options: Options(
-          receiveTimeout: const Duration(seconds: 5),
-        ),
-      );
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ));
+      (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
+        client.badCertificateCallback = (cert, host, port) => true;
+        return client;
+      };
+      final response = await dio.get('$url/api/health');
       return response.statusCode == 200;
     } catch (e) {
       return false;

@@ -26,6 +26,24 @@ class _StudentListPageState extends State<StudentListPage> {
   
   String? _selectedGrade;
   final _gradeController = TextEditingController();
+
+  static const Map<String, String> _gradeOptions = {
+    "T1": "托班",
+    "K1": "幼儿园小班", "K2": "幼儿园中班", "K3": "幼儿园大班",
+    "G1": "小学1年级", "G2": "小学2年级", "G3": "小学3年级",
+    "G4": "小学4年级", "G5": "小学5年级", "G6": "小学6年级",
+    "G7": "初中1年级", "G8": "初中2年级", "G9": "初中3年级",
+    "G10": "高中1年级", "G11": "高中2年级", "G12": "高中3年级",
+    "V1": "职高1年级", "V2": "职高2年级", "V3": "职高3年级",
+    "J1": "技校1年级", "J2": "技校2年级", "J3": "技校3年级",
+    "C1": "中专1年级", "C2": "中专2年级", "C3": "中专3年级",
+    "Z1": "专科1年级", "Z2": "专科2年级", "Z3": "专科3年级",
+    "U1": "大学1年级", "U2": "大学2年级", "U3": "大学3年级",
+    "U4": "大学4年级", "U5": "大学5年级",
+    "M1": "硕士1年级", "M2": "硕士2年级", "M3": "硕士3年级",
+    "D1": "博士1年级", "D2": "博士2年级", "D3": "博士3年级", "D4": "博士4年级",
+    "GRADUATED": "已毕业",
+  };
   
   @override
   void initState() {
@@ -97,23 +115,17 @@ class _StudentListPageState extends State<StudentListPage> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _selectedGrade,
+                menuMaxHeight: 300,
                 decoration: const InputDecoration(
                   labelText: '选择年级',
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: '一年级', child: Text('一年级')),
-                  DropdownMenuItem(value: '二年级', child: Text('二年级')),
-                  DropdownMenuItem(value: '三年级', child: Text('三年级')),
-                  DropdownMenuItem(value: '四年级', child: Text('四年级')),
-                  DropdownMenuItem(value: '五年级', child: Text('五年级')),
-                  DropdownMenuItem(value: '六年级', child: Text('六年级')),
-                  DropdownMenuItem(value: '初一', child: Text('初一')),
-                  DropdownMenuItem(value: '初二', child: Text('初二')),
-                  DropdownMenuItem(value: '初三', child: Text('初三')),
-                  DropdownMenuItem(value: '高一', child: Text('高一')),
-                  DropdownMenuItem(value: '高二', child: Text('高二')),
-                  DropdownMenuItem(value: '高三', child: Text('高三')),
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('请选择')),
+                  ..._gradeOptions.entries.map((e) => DropdownMenuItem(
+                    value: e.key,
+                    child: Text(e.value),
+                  )),
                 ],
                 onChanged: (value) {
                   setState(() {

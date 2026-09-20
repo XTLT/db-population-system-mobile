@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_config.dart';
 import '../../services/domain_service.dart';
+import '../../api/api_client.dart';
 import '../../providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'app_settings_page.dart';
@@ -139,6 +140,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
     
     await AppConfig.updateBaseUrl(newUrl);
+    ApiClient().resetEffectiveBaseUrl();
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -150,7 +152,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _updateBackupUrls() async {
     final urls = _backupUrlController.text
         .split('\n')
-        .map((url) => url.trim())
+        .map((url) => AppConfig.normalizeUrl(url))
         .where((url) => url.isNotEmpty)
         .toList();
     
@@ -160,6 +162,7 @@ class _SettingsPageState extends State<SettingsPage> {
     
     
     AppConfig.backupUrls = urls;
+    _backupUrlController.text = urls.join('\n');
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -170,6 +173,7 @@ class _SettingsPageState extends State<SettingsPage> {
   
   Future<void> _resetToDefault() async {
     await AppConfig.resetToDefault();
+    ApiClient().resetEffectiveBaseUrl();
     _urlController.text = AppConfig.apiBaseUrl;
     _loadBackupUrls();
     
@@ -283,6 +287,21 @@ class _SettingsPageState extends State<SettingsPage> {
                             child: Text(
                               '响应时间: ${_testResult!['response_time']}ms',
                               style: const TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        if (_testResult!['fallback'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              _testResult!['fallback'] == 'IPv6 链路本地'
+                                  ? '通过 IPv6 链路本地地址连接成功（同局域网）'
+                                  : _testResult!['fallback'] == 'IPv4'
+                                    ? '通过 IPv4 回退连接成功'
+                                    : '通过备用地址连接成功',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.orange.shade700,
+                              ),
                             ),
                           ),
                         if (_testResult!['error'] != null)

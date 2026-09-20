@@ -119,7 +119,7 @@ class OfflineDataService {
         if (key.startsWith(_offlineDataPrefix)) {
           final value = prefs.getString(key);
           if (value != null) {
-            totalSize += value.length;
+            totalSize += value.length * 2;
           }
         }
       }

@@ -101,6 +101,7 @@ class _MonthlyPaymentQueryPageState extends State<MonthlyPaymentQueryPage> {
             // 月份选择
             DropdownButtonFormField<String>(
               value: _selectedPeriod,
+              menuMaxHeight: 300,
               decoration: const InputDecoration(
                 labelText: '费款所属期',
                 border: OutlineInputBorder(),

@@ -126,4 +126,13 @@ class AppConfig {
         : apiBaseUrl;
     return '$base/api/v1$path';
   }
+
+  static String normalizeUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return trimmed;
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return 'https://$trimmed';
+    }
+    return trimmed;
+  }
 }

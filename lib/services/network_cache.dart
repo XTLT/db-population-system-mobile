@@ -12,7 +12,7 @@ class NetworkCache {
   static const String _cacheVersionKey = 'network_cache_version';
   
   static const int _cacheVersion = 2; 
-  static const int _defaultCacheDuration = 5 * 60; 
+  static const int _defaultCacheDuration = 30 * 60; 
 
   
   Future<void> init() async {
@@ -116,7 +116,7 @@ class NetworkCache {
         if (key.startsWith(_cachePrefix)) {
           final value = prefs.getString(key);
           if (value != null) {
-            totalSize += value.length;
+            totalSize += value.length * 2;
           }
         }
       }
@@ -164,17 +164,12 @@ class NetworkCache {
   
   
   static int getCacheDuration(String path) {
-    
     if (path.contains('/statistics')) {
-      return 10 * 60; 
+      return 60 * 60; 
     }
-    
-    
     if (path.contains('/person/') || path.contains('/student/')) {
-      return 2 * 60; 
+      return 30 * 60; 
     }
-    
-    
-    return 1 * 60; 
+    return 15 * 60; 
   }
 }

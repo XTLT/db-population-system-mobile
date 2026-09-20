@@ -4,6 +4,7 @@ import '../../providers/theme_provider.dart';
 import '../../services/offline_data_service.dart';
 import '../../services/network_cache.dart';
 import '../../api/api_client.dart';
+import '../../config/app_config.dart';
 import 'theme_customize_page.dart';
 
 class AppSettingsPage extends StatefulWidget {
@@ -13,7 +14,7 @@ class AppSettingsPage extends StatefulWidget {
   State<AppSettingsPage> createState() => _AppSettingsPageState();
 }
 
-class _AppSettingsPageState extends State<AppSettingsPage> {
+class _AppSettingsPageState extends State<AppSettingsPage> with WidgetsBindingObserver {
   int _networkCacheSize = 0;
   int _offlineDataSize = 0;
   DateTime? _lastSyncTime;
@@ -22,7 +23,21 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadCacheInfo();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadCacheInfo();
+    }
   }
   
   Future<void> _loadCacheInfo() async {
@@ -297,7 +312,7 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
                     ListTile(
                       leading: const Icon(Icons.info),
                       title: const Text('应用版本'),
-                      subtitle: const Text('1.0.0'),
+                      subtitle: Text(AppConfig.appVersion),
                     ),
                     ListTile(
                       leading: const Icon(Icons.code),

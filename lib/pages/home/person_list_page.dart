@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/person.dart';
 import '../../api/person_api.dart';
 import '../../api/batch_operation_api.dart';
+import '../../services/offline_data_service.dart';
 import '../person/person_detail_page.dart';
 import '../person/person_edit_page.dart';
 import '../search/advanced_search_page.dart';
@@ -335,6 +336,12 @@ class _PersonListPageState extends State<PersonListPage> {
         _persons = results;
         _isLoading = false;
       });
+
+      if (results.isNotEmpty) {
+        await OfflineDataService().cachePersonList(
+          results.map((p) => p.toJson()).toList(),
+        );
+      }
       
       if (results.isEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

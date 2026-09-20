@@ -349,6 +349,7 @@ class _StudentEditPageState extends State<StudentEditPage> {
           labelText: '年级',
           border: OutlineInputBorder(),
         ),
+        menuMaxHeight: 300,
         items: _gradeOptions.entries.map((entry) {
           return DropdownMenuItem(
             value: entry.key,

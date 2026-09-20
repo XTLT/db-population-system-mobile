@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../api/api_client.dart';
 import '../../api/statistics_api.dart';
+import '../../services/offline_data_service.dart';
 import '../statistics/trend_chart_page.dart';
 import '../statistics/distribution_chart_page.dart';
 import '../statistics/radar_chart_page.dart';
@@ -50,6 +51,12 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
         _studentStats = results[1];
         _landSubsidyStats = results[2];
         _isLoading = false;
+      });
+
+      await OfflineDataService().cacheStatistics({
+        'person': results[0],
+        'student': results[1],
+        'land_subsidy': results[2],
       });
     } catch (e) {
       setState(() {
