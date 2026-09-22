@@ -3,11 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
-import 'dart:io';
 import '../../providers/auth_provider.dart';
 import '../home/home_page.dart';
 import '../../config/app_config.dart';
-import '../../utils/security_utils.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

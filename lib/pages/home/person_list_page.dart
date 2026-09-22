@@ -4,7 +4,6 @@ import '../../api/person_api.dart';
 import '../../api/batch_operation_api.dart';
 import '../../services/offline_data_service.dart';
 import '../person/person_detail_page.dart';
-import '../person/person_edit_page.dart';
 import '../search/advanced_search_page.dart';
 
 class PersonListPage extends StatefulWidget {
@@ -388,30 +387,7 @@ class _PersonListPageState extends State<PersonListPage> {
       }
     }
   }
-  
-  Future<void> _navigateToAddPerson() async {
-    final result = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const PersonEditPage(),
-      ),
-    );
-    
-    if (result == true && mounted) {
-      _loadPersons();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('人员添加成功')),
-      );
-    }
-  }
-  
-  void _showPhotoCapture() {
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('拍照录入功能开发中...')),
-    );
-  }
-  
+
   @override
   void dispose() {
     _searchController.dispose();

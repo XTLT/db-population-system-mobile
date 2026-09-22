@@ -2,10 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../services/photo_service.dart';
 import '../../api/batch_operation_api.dart';
-import '../../api/api_client.dart';
 import '../../config/app_config.dart';
 import '../../services/connectivity_service.dart';
-import '../../models/offline_operation.dart';
 import '../../widgets/secure_image.dart';
 
 class PhotoManagePage extends StatefulWidget {
@@ -24,7 +22,6 @@ class PhotoManagePage extends StatefulWidget {
 
 class _PhotoManagePageState extends State<PhotoManagePage> {
   List<Map<String, dynamic>> _photos = [];
-  List<Map<String, dynamic>> _offlinePhotos = [];
   bool _isLoading = true;
   bool _isUploading = false;
   int _uploadProgress = 0;
@@ -68,12 +65,8 @@ class _PhotoManagePageState extends State<PhotoManagePage> {
     
     final photos = await PhotoService.getPhotoList(widget.idCard);
 
-    
-    final offlinePhotos = await PhotoService.getOfflinePhotos(widget.idCard);
-
     setState(() {
       _photos = photos;
-      _offlinePhotos = offlinePhotos;
       _isLoading = false;
     });
   }

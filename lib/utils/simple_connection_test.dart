@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
-import 'dart:io';
 
 
 class SimpleConnectionTest {

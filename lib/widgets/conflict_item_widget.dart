@@ -19,7 +19,6 @@ class ConflictItemWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final operation = OfflineOperation.fromJson(conflict['operation']);
-    final serverData = conflict['server_data'] as Map<String, dynamic>;
     final detectedAt = DateTime.parse(conflict['detected_at']);
 
     return Card(

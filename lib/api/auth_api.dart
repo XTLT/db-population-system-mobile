@@ -1,7 +1,6 @@
 
 import 'package:dio/dio.dart';
 import '../models/user.dart';
-import '../utils/security_utils.dart';
 import 'api_client.dart';
 
 class AuthApi {

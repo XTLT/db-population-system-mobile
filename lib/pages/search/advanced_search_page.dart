@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../models/person.dart';
 import '../../api/person_api.dart';
 import '../../services/search_history_service.dart';
 import '../../services/saved_filter_service.dart';

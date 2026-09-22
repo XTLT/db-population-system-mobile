@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
 import '../../providers/notification_provider.dart';
 import '../../models/notification.dart';
 import 'package:pull_to_refresh/pull_to_refresh.dart';
@@ -14,7 +13,6 @@ class NotificationCenterPage extends StatefulWidget {
 
 class _NotificationCenterPageState extends State<NotificationCenterPage> {
   final RefreshController _refreshController = RefreshController();
-  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
 
   @override
   void initState() {

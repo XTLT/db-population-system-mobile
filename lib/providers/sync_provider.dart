@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../models/offline_operation.dart';
 import '../services/sync_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/offline_data_service.dart';
