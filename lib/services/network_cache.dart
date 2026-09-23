@@ -11,7 +11,7 @@ class NetworkCache {
   static const String _cachePrefix = 'network_cache_';
   static const String _cacheVersionKey = 'network_cache_version';
   
-  static const int _cacheVersion = 2; 
+  static const int _cacheVersion = 3;
   static const int _defaultCacheDuration = 30 * 60; 
 
   
@@ -165,7 +165,7 @@ class NetworkCache {
   
   static int getCacheDuration(String path) {
     if (path.contains('/statistics')) {
-      return 60 * 60; 
+      return 5 * 60;
     }
     if (path.contains('/person/') || path.contains('/student/')) {
       return 30 * 60; 
