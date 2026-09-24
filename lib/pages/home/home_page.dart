@@ -45,7 +45,7 @@ class _HomePageState extends State<HomePage> {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('人口信息查询系统'),
+        title: const Text('人口通'),
         actions: [
           
           const SyncStatusIndicator(),

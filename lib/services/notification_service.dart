@@ -49,8 +49,8 @@ class NotificationService {
 
     const androidDetails = AndroidNotificationDetails(
       'population_channel',
-      '人口信息通知',
-      channelDescription: '人口信息查询系统通知',
+      '人口通通知',
+      channelDescription: '人口通通知',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -87,8 +87,8 @@ class NotificationService {
 
     const androidDetails = AndroidNotificationDetails(
       'population_channel',
-      '人口信息通知',
-      channelDescription: '人口信息查询系统通知',
+      '人口通通知',
+      channelDescription: '人口通通知',
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,

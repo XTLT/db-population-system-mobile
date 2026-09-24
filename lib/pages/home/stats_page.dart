@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../api/api_client.dart';
 import '../../api/statistics_api.dart';
-import '../../services/offline_data_service.dart';
 import '../statistics/trend_chart_page.dart';
 import '../statistics/distribution_chart_page.dart';
 import '../statistics/radar_chart_page.dart';
@@ -38,34 +37,45 @@ class _StatsPageState extends State<StatsPage> with SingleTickerProviderStateMix
       _isLoading = true;
     });
 
+    Map<String, dynamic>? personStats;
+    Map<String, dynamic>? studentStats;
+    Map<String, dynamic>? landSubsidyStats;
+    String? studentError;
+
     try {
-      
-      final results = await Future.wait([
-        StatisticsApi.getPersonStatistics(),
-        StatisticsApi.getStudentStatistics(),
-        StatisticsApi.getLandSubsidyStatistics(),
-      ]);
-
-      setState(() {
-        _personStats = results[0];
-        _studentStats = results[1];
-        _landSubsidyStats = results[2];
-        _isLoading = false;
-      });
-
-      await OfflineDataService().cacheStatistics({
-        'person': results[0],
-        'student': results[1],
-        'land_subsidy': results[2],
-      });
+      personStats = await StatisticsApi.getPersonStatistics();
     } catch (e) {
+      debugPrint('Person stats failed: $e');
+    }
+
+    try {
+      studentStats = await StatisticsApi.getStudentStatistics();
+    } catch (e) {
+      debugPrint('Student stats failed: $e');
+      studentError = e.toString();
+    }
+
+    try {
+      landSubsidyStats = await StatisticsApi.getLandSubsidyStatistics();
+    } catch (e) {
+      debugPrint('Land subsidy stats failed: $e');
+    }
+
+    if (mounted) {
       setState(() {
+        _personStats = personStats;
+        _studentStats = studentStats;
+        _landSubsidyStats = landSubsidyStats;
         _isLoading = false;
       });
 
-      if (mounted) {
+      if (studentError != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载统计数据失败: $e')),
+          SnackBar(
+            content: Text('学生统计加载失败: $studentError'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }
@@ -652,21 +662,16 @@ class _StudentStatsTab extends StatelessWidget {
     if (stats == null) {
       return const Center(child: Text('暂无数据'));
     }
-    
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          
           _buildStudentSummaryCard(),
           const SizedBox(height: 24),
-          
-          
           _buildSection('年级分布', _buildGradeDistribution()),
           const SizedBox(height: 24),
-          
-          
           _buildSection('学生状态', _buildStudentStatus()),
         ],
       ),
@@ -757,18 +762,23 @@ class _StudentStatsTab extends StatelessWidget {
     
     final typeCount = <String, int>{};
     gradeDistribution.forEach((key, value) {
-      if (key.startsWith('K')) {
+      if (key == 'GRADUATED') {
+        typeCount['已毕业'] = (typeCount['已毕业'] ?? 0) + (value as int);
+      } else if (key.startsWith('K')) {
         typeCount['幼儿园'] = (typeCount['幼儿园'] ?? 0) + (value as int);
-      } else if (key.startsWith('G') && int.parse(key.substring(1)) <= 6) {
-        typeCount['小学'] = (typeCount['小学'] ?? 0) + (value as int);
-      } else if (key.startsWith('G') && int.parse(key.substring(1)) > 6 && int.parse(key.substring(1)) <= 9) {
-        typeCount['初中'] = (typeCount['初中'] ?? 0) + (value as int);
-      } else if (key.startsWith('G') && int.parse(key.substring(1)) > 9) {
-        typeCount['高中'] = (typeCount['高中'] ?? 0) + (value as int);
+      } else if (key.startsWith('G')) {
+        final gradeNum = int.tryParse(key.substring(1)) ?? 99;
+        if (gradeNum <= 6) {
+          typeCount['小学'] = (typeCount['小学'] ?? 0) + (value as int);
+        } else if (gradeNum <= 9) {
+          typeCount['初中'] = (typeCount['初中'] ?? 0) + (value as int);
+        } else {
+          typeCount['高中'] = (typeCount['高中'] ?? 0) + (value as int);
+        }
       } else if (key.startsWith('U')) {
         typeCount['大学'] = (typeCount['大学'] ?? 0) + (value as int);
-      } else if (key == 'GRADUATED') {
-        typeCount['已毕业'] = (typeCount['已毕业'] ?? 0) + (value as int);
+      } else if (key.startsWith('V')) {
+        typeCount['职业'] = (typeCount['职业'] ?? 0) + (value as int);
       } else {
         typeCount['其他'] = (typeCount['其他'] ?? 0) + (value as int);
       }

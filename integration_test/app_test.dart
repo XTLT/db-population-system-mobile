@@ -22,7 +22,7 @@ void main() {
       expect(find.byType(LoginPage), findsOneWidget);
       
       // 应该显示应用标题
-      expect(find.text('人口信息查询系统'), findsOneWidget);
+      expect(find.text('人口通'), findsOneWidget);
       
       // 应该显示登录按钮
       expect(find.text('登录'), findsOneWidget);

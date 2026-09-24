@@ -17,7 +17,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
   final List<OnboardingStep> _steps = const [
     OnboardingStep(
-      title: '欢迎使用人口信息管理系统',
+      title: '欢迎使用人口通',
       description: '高效管理人口信息，随时随地查询和编辑',
       icon: Icons.people,
     ),

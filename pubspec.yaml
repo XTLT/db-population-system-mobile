@@ -1,9 +1,9 @@
 name: population_mobile
-description: 人口信息查询系统移动端
+description: 人口通移动端
 
 publish_to: 'none'
 
-version: 0.0.6+6
+version: 0.0.7+7
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
