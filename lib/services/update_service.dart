@@ -143,3 +143,84 @@ class UpdateService {
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }
+
+class ServerUpdateResult {
+  final bool success;
+  final String? oldCommit;
+  final String? newCommit;
+  final String? error;
+  final String? deployLog;
+
+  ServerUpdateResult({
+    required this.success,
+    this.oldCommit,
+    this.newCommit,
+    this.error,
+    this.deployLog,
+  });
+}
+
+extension ServerUpdate on UpdateService {
+  Future<ServerUpdateResult> updateServer({
+    Function(String)? onStatus,
+  }) async {
+    String? oldCommit;
+    try {
+      onStatus?.call('正在发送更新指令...');
+      final response = await ApiClient().dio.post('/api/update/server');
+      if (response.statusCode != 200) {
+        return ServerUpdateResult(
+          success: false,
+          error: response.data['error'] ?? '请求失败',
+        );
+      }
+      oldCommit = response.data['old_commit'];
+      onStatus?.call('服务器正在拉取代码 (旧版本: $oldCommit)...');
+    } catch (e) {
+      return ServerUpdateResult(success: false, error: '发送更新指令失败: $e');
+    }
+
+    // 轮询健康检查，等待 gunicorn 重启完成
+    onStatus?.call('等待服务器重启...');
+    final healthDio = Dio(BaseOptions(
+      baseUrl: ApiClient().dio.options.baseUrl,
+      connectTimeout: const Duration(seconds: 5),
+      receiveTimeout: const Duration(seconds: 5),
+    ));
+    (healthDio.httpClientAdapter as dynamic).onHttpClientCreate = (client) {
+      client.badCertificateCallback = (cert, host, port) => true;
+      return client;
+    };
+
+    const maxAttempts = 20;
+    const interval = Duration(seconds: 3);
+    for (int i = 0; i < maxAttempts; i++) {
+      await Future.delayed(interval);
+      try {
+        final resp = await healthDio.get('/api/health');
+        if (resp.statusCode == 200 && resp.data['healthy'] == true) {
+          onStatus?.call('服务器已重启，正在获取更新结果...');
+          try {
+            final statusResp = await ApiClient().dio.get('/api/update/server_status');
+            if (statusResp.statusCode == 200) {
+              return ServerUpdateResult(
+                success: true,
+                oldCommit: oldCommit,
+                newCommit: statusResp.data['current_commit'],
+                deployLog: statusResp.data['deploy_log'],
+              );
+            }
+          } catch (_) {}
+          return ServerUpdateResult(success: true, oldCommit: oldCommit);
+        }
+      } catch (_) {}
+      onStatus?.call('等待服务器重启... (${i + 1}/$maxAttempts)');
+    }
+
+    return ServerUpdateResult(
+      success: false,
+      error: '更新超时，服务器可能仍在重启中，请稍后手动检查',
+      oldCommit: oldCommit,
+    );
+  }
+}

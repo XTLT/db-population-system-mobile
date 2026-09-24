@@ -506,6 +506,16 @@ class _SettingsPageState extends State<SettingsPage> {
                         },
                       ),
                     ),
+                    const SizedBox(height: 8),
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.cloud_sync, color: Colors.teal),
+                        title: const Text('服务器代码更新'),
+                        subtitle: const Text('从Gitee拉取最新代码并重启服务器'),
+                        trailing: const Icon(Icons.arrow_forward),
+                        onTap: () => _showServerUpdateDialog(context),
+                      ),
+                    ),
                   ],
                 );
               },
@@ -573,5 +583,91 @@ class _SettingsPageState extends State<SettingsPage> {
         ...children,
       ],
     );
+  }
+
+  void _showServerUpdateDialog(BuildContext context) {
+    String statusText = '准备更新...';
+    bool isRunning = true;
+    ServerUpdateResult? result;
+    void Function(void Function())? dialogSetState;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            dialogSetState = setState;
+            return AlertDialog(
+              title: const Text('服务器代码更新'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isRunning) ...[
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(statusText),
+                  ] else ...[
+                    Icon(
+                      result!.success ? Icons.check_circle : Icons.error,
+                      color: result!.success ? Colors.green : Colors.red,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(result!.success ? '更新成功!' : '更新失败'),
+                    const SizedBox(height: 8),
+                    if (result!.oldCommit != null)
+                      Text('旧版本: ${result!.oldCommit}',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    if (result!.newCommit != null)
+                      Text('新版本: ${result!.newCommit}',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    if (result!.error != null)
+                      Text(result!.error!,
+                          style: const TextStyle(fontSize: 12, color: Colors.red)),
+                    if (result!.deployLog != null &&
+                        result!.deployLog!.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      const Text('更新日志:',
+                          style:
+                              TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 150),
+                        child: SingleChildScrollView(
+                          child: Text(
+                            result!.deployLog!,
+                            style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+              actions: [
+                if (!isRunning)
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext),
+                    child: const Text('关闭'),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    UpdateService().updateServer(
+      onStatus: (msg) {
+        statusText = msg;
+        dialogSetState?.call(() {});
+      },
+    ).then((r) {
+      result = r;
+      isRunning = false;
+      dialogSetState?.call(() {});
+    });
   }
 }
