@@ -72,4 +72,20 @@ class BackupProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> deleteBackup(String name) async {
+    try {
+      final result = await BackupApi.deleteBackup(name);
+      if (result['success'] == true) {
+        _backups.removeWhere((b) => b.path == name);
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
 }

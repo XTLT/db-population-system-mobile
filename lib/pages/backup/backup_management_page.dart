@@ -194,6 +194,13 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
                 title: Text('恢复'),
               ),
             ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: ListTile(
+                leading: Icon(Icons.delete, color: Colors.red),
+                title: Text('删除', style: TextStyle(color: Colors.red)),
+              ),
+            ),
           ],
         ),
       ),
@@ -204,6 +211,9 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
     switch (action) {
       case 'restore':
         _showRestoreDialog(backup);
+        break;
+      case 'delete':
+        _showDeleteDialog(backup);
         break;
     }
   }
@@ -332,6 +342,70 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
               }
             },
             child: const Text('确定恢复'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteDialog(BackupInfo backup) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除备份'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('备份时间: ${backup.time}'),
+            const SizedBox(height: 8),
+            Text('文件大小: ${backup.formattedSize}'),
+            const SizedBox(height: 16),
+            Text(
+              '⚠️ 确定要删除此备份吗？删除后无法恢复！',
+              style: TextStyle(color: Colors.red.shade700, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+
+              final scaffoldMessenger = ScaffoldMessenger.of(context);
+              scaffoldMessenger.showSnackBar(
+                const SnackBar(content: Text('正在删除备份...')),
+              );
+
+              final success = await context.read<BackupProvider>().deleteBackup(backup.path);
+
+              if (mounted) {
+                if (success) {
+                  scaffoldMessenger.showSnackBar(
+                    const SnackBar(
+                      content: Text('备份已删除'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  scaffoldMessenger.showSnackBar(
+                    SnackBar(
+                      content: Text(context.read<BackupProvider>().errorMessage ?? '删除失败'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('确定删除'),
           ),
         ],
       ),

@@ -74,4 +74,21 @@ class BackupApi {
       throw Exception('获取备份状态失败: $e');
     }
   }
+
+  static Future<Map<String, dynamic>> deleteBackup(String name) async {
+    try {
+      final response = await _dio.post(
+        '/api/backup/delete',
+        data: {'name': name},
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception(response.data['error'] ?? '删除备份失败');
+      }
+    } catch (e) {
+      throw Exception('删除备份失败: $e');
+    }
+  }
 }
