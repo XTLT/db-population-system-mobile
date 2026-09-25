@@ -26,7 +26,7 @@ class AuthApi {
             'token': data['token'],
             'user': User(
               username: username,
-              role: data['role'],
+              role: data['user']?['role'],
               token: data['token'],
             ),
             'require_password_change': data['require_password_change'] ?? false,
