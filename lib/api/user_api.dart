@@ -8,7 +8,7 @@ class UserApi {
   
   static Future<List<UserInfo>> getUserList() async {
     try {
-      final response = await _dio.get('/api/users');
+      final response = await _dio.get('/api/users/');
 
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['users'] ?? [];
@@ -29,7 +29,7 @@ class UserApi {
     String role = 'user',
   }) async {
     try {
-      final response = await _dio.post('/api/users', data: {
+      final response = await _dio.post('/api/users/', data: {
         'username': username,
         'password': password,
         'real_name': realName,

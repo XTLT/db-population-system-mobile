@@ -23,6 +23,7 @@ void main() {
         'social_card2': null,
         'social_card3': null,
         'land_area': '10.5',
+        'forest_area': '8.5',
       };
 
       final person = Person.fromJson(json);
@@ -45,6 +46,7 @@ void main() {
       expect(person.socialCard2, isNull);
       expect(person.socialCard3, isNull);
       expect(person.landArea, '10.5');
+      expect(person.forestArea, '8.5');
     });
 
     test('should convert Person to JSON', () {
@@ -122,6 +124,7 @@ void main() {
         socialCard2: '111222333',
         socialCard3: '444555666',
         landArea: '15.5',
+        forestArea: '12.5',
       );
 
       expect(person.idCard, '110101199001011234');
@@ -130,6 +133,7 @@ void main() {
       expect(person.disLevel, '三级');
       expect(person.socialCard2, '111222333');
       expect(person.landArea, '15.5');
+      expect(person.forestArea, '12.5');
     });
   });
 }

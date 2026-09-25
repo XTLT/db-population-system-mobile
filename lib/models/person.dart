@@ -76,6 +76,7 @@ class Person {
   final String? socialCard3;
   final String? isMigrated;
   final String? landArea;
+  final String? forestArea;
   final Education? education;
 
   Person({
@@ -102,6 +103,7 @@ class Person {
     this.socialCard3,
     this.isMigrated,
     this.landArea,
+    this.forestArea,
     this.education,
   });
 
@@ -130,6 +132,7 @@ class Person {
       socialCard3: json['social_card3'],
       isMigrated: json['is_migrated'],
       landArea: json['land_area'],
+      forestArea: json['forest_area'],
       education: json['education'] != null
           ? Education.fromJson(json['education'])
           : null,
@@ -160,6 +163,7 @@ class Person {
       'social_card3': socialCard3,
       'is_migrated': isMigrated,
       'land_area': landArea,
+      'forest_area': forestArea,
     };
   }
 

@@ -285,6 +285,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
 
           _buildInfoSection('其他信息', [
             _buildInfoItem('土地面积', person.landArea),
+            _buildInfoItem('林地面积', person.forestArea),
             _buildInfoItem('备注', person.remark),
           ]),
         ],

@@ -898,6 +898,9 @@ class _SubsidyStatsTab extends StatelessWidget {
           const SizedBox(height: 24),
 
           _buildSection('土地面积统计', _buildLandAreaStats()),
+          const SizedBox(height: 24),
+
+          _buildSection('林地面积统计', _buildForestAreaStats()),
         ],
       ),
     );
@@ -1083,6 +1086,66 @@ class _SubsidyStatsTab extends StatelessWidget {
                   children: [
                     Text(
                       avgLandArea.toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '人均（亩）',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildForestAreaStats() {
+    final totalForestArea = personStats?['total_forest_area'] ?? 0;
+    final avgForestArea = personStats?['avg_forest_area'] ?? 0;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: [
+                    Text(
+                      totalForestArea.toStringAsFixed(2),
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '总面积（亩）',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    Text(
+                      avgForestArea.toStringAsFixed(2),
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
