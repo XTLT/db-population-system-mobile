@@ -119,22 +119,66 @@ class Validators {
   }
 
 
-  static String? validateForestArea(String? value) {
+  static String? validateLocalWelfareForestArea(String? value) {
     if (value == null || value.isEmpty) {
       return null;
     }
 
     final number = double.tryParse(value);
     if (number == null) {
-      return '林地面积必须是数字';
+      return '地方公益林面积必须是数字';
     }
 
     if (number < 0) {
-      return '林地面积不能为负数';
+      return '地方公益林面积不能为负数';
     }
 
     if (number > 99999) {
-      return '林地面积数值过大';
+      return '地方公益林面积数值过大';
+    }
+
+    return null;
+  }
+
+
+  static String? validateNationalWelfareForestArea(String? value) {
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    final number = double.tryParse(value);
+    if (number == null) {
+      return '国家公益林面积必须是数字';
+    }
+
+    if (number < 0) {
+      return '国家公益林面积不能为负数';
+    }
+
+    if (number > 99999) {
+      return '国家公益林面积数值过大';
+    }
+
+    return null;
+  }
+
+
+  static String? validateCommercialForestArea(String? value) {
+    if (value == null || value.isEmpty) {
+      return null;
+    }
+
+    final number = double.tryParse(value);
+    if (number == null) {
+      return '非国有天然商品林面积必须是数字';
+    }
+
+    if (number < 0) {
+      return '非国有天然商品林面积不能为负数';
+    }
+
+    if (number > 99999) {
+      return '非国有天然商品林面积数值过大';
     }
 
     return null;

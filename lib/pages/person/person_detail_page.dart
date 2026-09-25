@@ -285,7 +285,10 @@ class _PersonDetailPageState extends State<PersonDetailPage>
 
           _buildInfoSection('其他信息', [
             _buildInfoItem('土地面积', person.landArea),
-            _buildInfoItem('林地面积', person.forestArea),
+            _buildInfoItem('地方公益林', person.localWelfareForestArea),
+            _buildInfoItem('国家公益林', person.nationalWelfareForestArea),
+            _buildInfoItem('非国有天然商品林', person.commercialForestArea),
+            _buildInfoItem('林地总面积', _calculateForestTotal(person)),
             _buildInfoItem('备注', person.remark),
           ]),
         ],
@@ -293,6 +296,15 @@ class _PersonDetailPageState extends State<PersonDetailPage>
     );
   }
   
+  String? _calculateForestTotal(Person person) {
+    final local = double.tryParse(person.localWelfareForestArea ?? '') ?? 0;
+    final national = double.tryParse(person.nationalWelfareForestArea ?? '') ?? 0;
+    final commercial = double.tryParse(person.commercialForestArea ?? '') ?? 0;
+    final total = local + national + commercial;
+    if (total == 0) return null;
+    return total.toStringAsFixed(2);
+  }
+
   Widget _buildInfoSection(String title, List<Widget> children) {
     final nonNullChildren = children.where((w) => w != const SizedBox()).toList();
     

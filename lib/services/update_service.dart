@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -165,6 +166,7 @@ extension ServerUpdate on UpdateService {
     Function(String)? onStatus,
   }) async {
     String? oldCommit;
+    String effectiveUrl = ApiClient().dio.options.baseUrl;
     try {
       onStatus?.call('正在发送更新指令...');
       final response = await ApiClient().dio.post('/api/update/server');
@@ -175,6 +177,10 @@ extension ServerUpdate on UpdateService {
         );
       }
       oldCommit = response.data['old_commit'];
+      // 捕获 POST 请求实际使用的 URL（ApiClient 拦截器可能通过 IPv4/IPv6/备用域名回退）
+      if (response.requestOptions.baseUrl.isNotEmpty) {
+        effectiveUrl = response.requestOptions.baseUrl;
+      }
       onStatus?.call('服务器正在拉取代码 (旧版本: $oldCommit)...');
     } catch (e) {
       return ServerUpdateResult(success: false, error: '发送更新指令失败: $e');
@@ -183,14 +189,16 @@ extension ServerUpdate on UpdateService {
     // 轮询健康检查，等待 gunicorn 重启完成
     onStatus?.call('等待服务器重启...');
     final healthDio = Dio(BaseOptions(
-      baseUrl: ApiClient().dio.options.baseUrl,
+      baseUrl: effectiveUrl,
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 5),
     ));
-    (healthDio.httpClientAdapter as dynamic).onHttpClientCreate = (client) {
-      client.badCertificateCallback = (cert, host, port) => true;
-      return client;
-    };
+    healthDio.httpClientAdapter = IOHttpClientAdapter(
+      onHttpClientCreate: (client) {
+        client.badCertificateCallback = (cert, host, port) => true;
+        return client;
+      },
+    );
 
     const maxAttempts = 20;
     const interval = Duration(seconds: 3);

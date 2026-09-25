@@ -1111,62 +1111,74 @@ class _SubsidyStatsTab extends StatelessWidget {
   }
 
   Widget _buildForestAreaStats() {
-    final totalForestArea = personStats?['total_forest_area'] ?? 0;
-    final avgForestArea = personStats?['avg_forest_area'] ?? 0;
+    final totalLocal = (personStats?['total_local_welfare_forest_area'] ?? 0).toDouble();
+    final avgLocal = (personStats?['avg_local_welfare_forest_area'] ?? 0).toDouble();
+    final totalNational = (personStats?['total_national_welfare_forest_area'] ?? 0).toDouble();
+    final avgNational = (personStats?['avg_national_welfare_forest_area'] ?? 0).toDouble();
+    final totalCommercial = (personStats?['total_commercial_forest_area'] ?? 0).toDouble();
+    final avgCommercial = (personStats?['avg_commercial_forest_area'] ?? 0).toDouble();
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                Column(
-                  children: [
-                    Text(
-                      totalForestArea.toStringAsFixed(2),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '总面积（亩）',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-                Column(
-                  children: [
-                    Text(
-                      avgForestArea.toStringAsFixed(2),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '人均（亩）',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            _buildForestStatRow('地方公益林', totalLocal, avgLocal, Colors.green),
+            const Divider(height: 24),
+            _buildForestStatRow('国家公益林', totalNational, avgNational, Colors.blue),
+            const Divider(height: 24),
+            _buildForestStatRow('非国有天然商品林', totalCommercial, avgCommercial, Colors.orange),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildForestStatRow(String label, double total, double avg, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      children: [
+        Column(
+          children: [
+            Text(
+              total.toStringAsFixed(2),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$label总面积（亩）',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+        Column(
+          children: [
+            Text(
+              avg.toStringAsFixed(2),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$label人均（亩）',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

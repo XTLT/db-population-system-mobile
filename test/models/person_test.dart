@@ -23,7 +23,15 @@ void main() {
         'social_card2': null,
         'social_card3': null,
         'land_area': '10.5',
-        'forest_area': '8.5',
+        'local_welfare_forest_area': '3.0',
+        'local_welfare_forest_change_reason': '初始登记',
+        'local_welfare_forest_change_time': '2024-01-15',
+        'national_welfare_forest_area': '4.0',
+        'national_welfare_forest_change_reason': '初始登记',
+        'national_welfare_forest_change_time': '2024-01-15',
+        'commercial_forest_area': '1.5',
+        'commercial_forest_change_reason': '初始登记',
+        'commercial_forest_change_time': '2024-01-15',
       };
 
       final person = Person.fromJson(json);
@@ -46,7 +54,15 @@ void main() {
       expect(person.socialCard2, isNull);
       expect(person.socialCard3, isNull);
       expect(person.landArea, '10.5');
-      expect(person.forestArea, '8.5');
+      expect(person.localWelfareForestArea, '3.0');
+      expect(person.localWelfareForestChangeReason, '初始登记');
+      expect(person.localWelfareForestChangeTime, '2024-01-15');
+      expect(person.nationalWelfareForestArea, '4.0');
+      expect(person.nationalWelfareForestChangeReason, '初始登记');
+      expect(person.nationalWelfareForestChangeTime, '2024-01-15');
+      expect(person.commercialForestArea, '1.5');
+      expect(person.commercialForestChangeReason, '初始登记');
+      expect(person.commercialForestChangeTime, '2024-01-15');
     });
 
     test('should convert Person to JSON', () {
@@ -124,7 +140,15 @@ void main() {
         socialCard2: '111222333',
         socialCard3: '444555666',
         landArea: '15.5',
-        forestArea: '12.5',
+        localWelfareForestArea: '5.0',
+        localWelfareForestChangeReason: '流转',
+        localWelfareForestChangeTime: '2024-03-01',
+        nationalWelfareForestArea: '6.0',
+        nationalWelfareForestChangeReason: '流转',
+        nationalWelfareForestChangeTime: '2024-03-01',
+        commercialForestArea: '2.5',
+        commercialForestChangeReason: '流转',
+        commercialForestChangeTime: '2024-03-01',
       );
 
       expect(person.idCard, '110101199001011234');
@@ -133,7 +157,15 @@ void main() {
       expect(person.disLevel, '三级');
       expect(person.socialCard2, '111222333');
       expect(person.landArea, '15.5');
-      expect(person.forestArea, '12.5');
+      expect(person.localWelfareForestArea, '5.0');
+      expect(person.localWelfareForestChangeReason, '流转');
+      expect(person.localWelfareForestChangeTime, '2024-03-01');
+      expect(person.nationalWelfareForestArea, '6.0');
+      expect(person.nationalWelfareForestChangeReason, '流转');
+      expect(person.nationalWelfareForestChangeTime, '2024-03-01');
+      expect(person.commercialForestArea, '2.5');
+      expect(person.commercialForestChangeReason, '流转');
+      expect(person.commercialForestChangeTime, '2024-03-01');
     });
   });
 }

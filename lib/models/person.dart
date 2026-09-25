@@ -76,7 +76,15 @@ class Person {
   final String? socialCard3;
   final String? isMigrated;
   final String? landArea;
-  final String? forestArea;
+  final String? localWelfareForestArea;
+  final String? localWelfareForestChangeReason;
+  final String? localWelfareForestChangeTime;
+  final String? nationalWelfareForestArea;
+  final String? nationalWelfareForestChangeReason;
+  final String? nationalWelfareForestChangeTime;
+  final String? commercialForestArea;
+  final String? commercialForestChangeReason;
+  final String? commercialForestChangeTime;
   final Education? education;
 
   Person({
@@ -103,7 +111,15 @@ class Person {
     this.socialCard3,
     this.isMigrated,
     this.landArea,
-    this.forestArea,
+    this.localWelfareForestArea,
+    this.localWelfareForestChangeReason,
+    this.localWelfareForestChangeTime,
+    this.nationalWelfareForestArea,
+    this.nationalWelfareForestChangeReason,
+    this.nationalWelfareForestChangeTime,
+    this.commercialForestArea,
+    this.commercialForestChangeReason,
+    this.commercialForestChangeTime,
     this.education,
   });
 
@@ -132,7 +148,15 @@ class Person {
       socialCard3: json['social_card3'],
       isMigrated: json['is_migrated'],
       landArea: json['land_area'],
-      forestArea: json['forest_area'],
+      localWelfareForestArea: json['local_welfare_forest_area'],
+      localWelfareForestChangeReason: json['local_welfare_forest_change_reason'],
+      localWelfareForestChangeTime: json['local_welfare_forest_change_time'],
+      nationalWelfareForestArea: json['national_welfare_forest_area'],
+      nationalWelfareForestChangeReason: json['national_welfare_forest_change_reason'],
+      nationalWelfareForestChangeTime: json['national_welfare_forest_change_time'],
+      commercialForestArea: json['commercial_forest_area'],
+      commercialForestChangeReason: json['commercial_forest_change_reason'],
+      commercialForestChangeTime: json['commercial_forest_change_time'],
       education: json['education'] != null
           ? Education.fromJson(json['education'])
           : null,
@@ -163,7 +187,15 @@ class Person {
       'social_card3': socialCard3,
       'is_migrated': isMigrated,
       'land_area': landArea,
-      'forest_area': forestArea,
+      'local_welfare_forest_area': localWelfareForestArea,
+      'local_welfare_forest_change_reason': localWelfareForestChangeReason,
+      'local_welfare_forest_change_time': localWelfareForestChangeTime,
+      'national_welfare_forest_area': nationalWelfareForestArea,
+      'national_welfare_forest_change_reason': nationalWelfareForestChangeReason,
+      'national_welfare_forest_change_time': nationalWelfareForestChangeTime,
+      'commercial_forest_area': commercialForestArea,
+      'commercial_forest_change_reason': commercialForestChangeReason,
+      'commercial_forest_change_time': commercialForestChangeTime,
     };
   }
 

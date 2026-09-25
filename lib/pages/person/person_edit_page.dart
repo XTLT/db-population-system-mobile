@@ -30,7 +30,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
   late TextEditingController _phoneController;
   late TextEditingController _remarkController;
   late TextEditingController _landAreaController;
-  late TextEditingController _forestAreaController;
+  late TextEditingController _localWelfareForestAreaController;
+  late TextEditingController _nationalWelfareForestAreaController;
+  late TextEditingController _commercialForestAreaController;
   late TextEditingController _socialCard1Controller;
   late TextEditingController _socialCard2Controller;
   late TextEditingController _socialCard3Controller;
@@ -100,7 +102,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
   bool _isLoading = false;
   bool _autoFillFromIdCard = false;
   String? _landAreaChangeReason;
-  String? _forestAreaChangeReason;
+  String? _localWelfareForestChangeReason;
+  String? _nationalWelfareForestChangeReason;
+  String? _commercialForestChangeReason;
   
   @override
   void initState() {
@@ -117,7 +121,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _phoneController = TextEditingController(text: widget.person?.phone ?? '');
     _remarkController = TextEditingController(text: widget.person?.remark ?? '');
     _landAreaController = TextEditingController(text: widget.person?.landArea ?? '');
-    _forestAreaController = TextEditingController(text: widget.person?.forestArea ?? '');
+    _localWelfareForestAreaController = TextEditingController(text: widget.person?.localWelfareForestArea ?? '');
+    _nationalWelfareForestAreaController = TextEditingController(text: widget.person?.nationalWelfareForestArea ?? '');
+    _commercialForestAreaController = TextEditingController(text: widget.person?.commercialForestArea ?? '');
     _socialCard1Controller = TextEditingController(text: widget.person?.socialCard1 ?? '');
     _socialCard2Controller = TextEditingController(text: widget.person?.socialCard2 ?? '');
     _socialCard3Controller = TextEditingController(text: widget.person?.socialCard3 ?? '');
@@ -173,7 +179,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _phoneController.dispose();
     _remarkController.dispose();
     _landAreaController.dispose();
-    _forestAreaController.dispose();
+    _localWelfareForestAreaController.dispose();
+    _nationalWelfareForestAreaController.dispose();
+    _commercialForestAreaController.dispose();
     _socialCard1Controller.dispose();
     _socialCard2Controller.dispose();
     _socialCard3Controller.dispose();
@@ -325,20 +333,20 @@ class _PersonEditPageState extends State<PersonEditPage> {
     });
   }
 
-  Future<String?> _showForestAreaChangeDialog() async {
+  Future<String?> _showLocalWelfareForestAreaChangeDialog() async {
     final reasonController = TextEditingController();
 
     return showDialog<String>(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: const Text('林地面积变更'),
+        title: const Text('地方公益林变更'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '林地面积已从 "${widget.person?.forestArea ?? ''}" 亩修改为 "${_forestAreaController.text.trim()}" 亩',
+              '地方公益林已从 "${widget.person?.localWelfareForestArea ?? ''}" 亩修改为 "${_localWelfareForestAreaController.text.trim()}" 亩',
               style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -380,7 +388,129 @@ class _PersonEditPageState extends State<PersonEditPage> {
       ),
     ).then((reason) {
       if (reason != null) {
-        _forestAreaChangeReason = reason;
+        _localWelfareForestChangeReason = reason;
+      }
+      return reason;
+    });
+  }
+
+  Future<String?> _showNationalWelfareForestAreaChangeDialog() async {
+    final reasonController = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('国家公益林变更'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '国家公益林已从 "${widget.person?.nationalWelfareForestArea ?? ''}" 亩修改为 "${_nationalWelfareForestAreaController.text.trim()}" 亩',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '请输入修改原因：',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: '例如：林地流转、测量修正等',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入修改原因')),
+                );
+                return;
+              }
+              Navigator.of(context).pop(reason);
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    ).then((reason) {
+      if (reason != null) {
+        _nationalWelfareForestChangeReason = reason;
+      }
+      return reason;
+    });
+  }
+
+  Future<String?> _showCommercialForestAreaChangeDialog() async {
+    final reasonController = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('非国有天然商品林变更'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '非国有天然商品林已从 "${widget.person?.commercialForestArea ?? ''}" 亩修改为 "${_commercialForestAreaController.text.trim()}" 亩',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              '请输入修改原因：',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: reasonController,
+              decoration: const InputDecoration(
+                hintText: '例如：林地流转、测量修正等',
+                border: OutlineInputBorder(),
+              ),
+              maxLines: 3,
+              autofocus: true,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(null),
+            child: const Text('取消'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final reason = reasonController.text.trim();
+              if (reason.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('请输入修改原因')),
+                );
+                return;
+              }
+              Navigator.of(context).pop(reason);
+            },
+            child: const Text('确定'),
+          ),
+        ],
+      ),
+    ).then((reason) {
+      if (reason != null) {
+        _commercialForestChangeReason = reason;
       }
       return reason;
     });
@@ -394,8 +524,12 @@ class _PersonEditPageState extends State<PersonEditPage> {
     
     final newLandArea = _landAreaController.text.trim();
     final oldLandArea = widget.person?.landArea ?? '';
-    final newForestArea = _forestAreaController.text.trim();
-    final oldForestArea = widget.person?.forestArea ?? '';
+    final newLocalWelfareForestArea = _localWelfareForestAreaController.text.trim();
+    final oldLocalWelfareForestArea = widget.person?.localWelfareForestArea ?? '';
+    final newNationalWelfareForestArea = _nationalWelfareForestAreaController.text.trim();
+    final oldNationalWelfareForestArea = widget.person?.nationalWelfareForestArea ?? '';
+    final newCommercialForestArea = _commercialForestAreaController.text.trim();
+    final oldCommercialForestArea = widget.person?.commercialForestArea ?? '';
     
     
     if (widget.person != null && 
@@ -409,9 +543,27 @@ class _PersonEditPageState extends State<PersonEditPage> {
     }
 
     if (widget.person != null &&
-        newForestArea != oldForestArea &&
-        oldForestArea.isNotEmpty) {
-      final reason = await _showForestAreaChangeDialog();
+        newLocalWelfareForestArea != oldLocalWelfareForestArea &&
+        oldLocalWelfareForestArea.isNotEmpty) {
+      final reason = await _showLocalWelfareForestAreaChangeDialog();
+      if (reason == null) {
+        return;
+      }
+    }
+
+    if (widget.person != null &&
+        newNationalWelfareForestArea != oldNationalWelfareForestArea &&
+        oldNationalWelfareForestArea.isNotEmpty) {
+      final reason = await _showNationalWelfareForestAreaChangeDialog();
+      if (reason == null) {
+        return;
+      }
+    }
+
+    if (widget.person != null &&
+        newCommercialForestArea != oldCommercialForestArea &&
+        oldCommercialForestArea.isNotEmpty) {
+      final reason = await _showCommercialForestAreaChangeDialog();
       if (reason == null) {
         return;
       }
@@ -444,15 +596,23 @@ class _PersonEditPageState extends State<PersonEditPage> {
         'social_card3': _socialCard3Controller.text.trim(),
         'land_area': newLandArea,
         'land_area_change_reason': _landAreaChangeReason ?? '',
-        'forest_area': newForestArea,
-        'forest_area_change_reason': _forestAreaChangeReason ?? '',
+        'local_welfare_forest_area': newLocalWelfareForestArea,
+        'local_welfare_forest_change_reason': _localWelfareForestChangeReason ?? '',
+        'national_welfare_forest_area': newNationalWelfareForestArea,
+        'national_welfare_forest_change_reason': _nationalWelfareForestChangeReason ?? '',
+        'commercial_forest_area': newCommercialForestArea,
+        'commercial_forest_change_reason': _commercialForestChangeReason ?? '',
       };
 
       debugPrint('========== 保存数据 ==========');
       debugPrint('土地面积: $newLandArea');
       debugPrint('土地面积变更原因: $_landAreaChangeReason');
-      debugPrint('林地面积: $newForestArea');
-      debugPrint('林地面积变更原因: $_forestAreaChangeReason');
+      debugPrint('地方公益林: $newLocalWelfareForestArea');
+      debugPrint('地方公益林变更原因: $_localWelfareForestChangeReason');
+      debugPrint('国家公益林: $newNationalWelfareForestArea');
+      debugPrint('国家公益林变更原因: $_nationalWelfareForestChangeReason');
+      debugPrint('非国有天然商品林: $newCommercialForestArea');
+      debugPrint('非国有天然商品林变更原因: $_commercialForestChangeReason');
       debugPrint('完整数据: $data');
       debugPrint('============================');
 
@@ -816,9 +976,21 @@ class _PersonEditPageState extends State<PersonEditPage> {
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                     ),
                     _buildTextField(
-                      controller: _forestAreaController,
-                      label: '林地面积（亩）',
-                      validator: Validators.validateForestArea,
+                      controller: _localWelfareForestAreaController,
+                      label: '地方公益林（亩）',
+                      validator: Validators.validateLocalWelfareForestArea,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    _buildTextField(
+                      controller: _nationalWelfareForestAreaController,
+                      label: '国家公益林（亩）',
+                      validator: Validators.validateNationalWelfareForestArea,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    _buildTextField(
+                      controller: _commercialForestAreaController,
+                      label: '非国有天然商品林（亩）',
+                      validator: Validators.validateCommercialForestArea,
                       keyboardType: TextInputType.numberWithOptions(decimal: true),
                     ),
                     _buildTextField(
