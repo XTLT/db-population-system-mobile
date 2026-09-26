@@ -615,7 +615,11 @@ class _SettingsPageState extends State<SettingsPage> {
                       size: 48,
                     ),
                     const SizedBox(height: 16),
-                    Text(result!.success ? '更新成功!' : '更新失败'),
+                    Text(result!.success
+                        ? (result!.oldCommit == result!.newCommit
+                            ? '已是最新版本!'
+                            : '更新成功!')
+                        : '更新失败'),
                     const SizedBox(height: 8),
                     if (result!.oldCommit != null)
                       Text('旧版本: ${result!.oldCommit}',
