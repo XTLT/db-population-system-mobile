@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../home/home_page.dart';
 import '../../config/app_config.dart';
 import '../../api/api_client.dart';
+import '../../widgets/update_dialog.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -25,6 +26,14 @@ class _LoginPageState extends State<LoginPage> {
     _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) UpdateDialog.showIfNeeded(context);
+    });
   }
   
   Future<void> _login() async {
