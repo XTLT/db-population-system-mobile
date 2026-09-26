@@ -186,6 +186,7 @@ extension ServerUpdate on UpdateService {
     }
 
     // 轮询健康检查，等待 gunicorn 重启完成
+    // 阶段1：等待服务下线（git pull + systemctl restart 期间旧服务会被杀掉）
     onStatus?.call('等待服务器重启...');
     final healthDio = Dio(BaseOptions(
       baseUrl: effectiveUrl,
@@ -194,35 +195,73 @@ extension ServerUpdate on UpdateService {
     ));
     ApiClient.applyCertificatePinning(healthDio);
 
-    const maxAttempts = 20;
+    const downAttempts = 15;  // 45s 等待服务下线
+    const upAttempts = 20;    // 60s 等待服务恢复
     const interval = Duration(seconds: 3);
-    for (int i = 0; i < maxAttempts; i++) {
+
+    // 等待健康检查失败（服务正在重启）
+    bool wentDown = false;
+    for (int i = 0; i < downAttempts; i++) {
       await Future.delayed(interval);
       try {
         final resp = await healthDio.get('/api/health');
-        if (resp.statusCode == 200 && resp.data['healthy'] == true) {
-          onStatus?.call('服务器已重启，正在获取更新结果...');
-          try {
-            final statusResp = await ApiClient().dio.get('/api/update/server_status');
-            if (statusResp.statusCode == 200) {
-              return ServerUpdateResult(
-                success: true,
-                oldCommit: oldCommit,
-                newCommit: statusResp.data['current_commit'],
-                deployLog: statusResp.data['deploy_log'],
-              );
-            }
-          } catch (_) {}
-          return ServerUpdateResult(success: true, oldCommit: oldCommit);
+        if (resp.statusCode != 200 || resp.data['healthy'] != true) {
+          wentDown = true;
+          break;
         }
-      } catch (_) {}
-      onStatus?.call('等待服务器重启... (${i + 1}/$maxAttempts)');
+      } catch (_) {
+        wentDown = true;
+        break;
+      }
+      onStatus?.call('等待服务器关闭... (${i + 1}/$downAttempts)');
     }
 
-    return ServerUpdateResult(
-      success: false,
-      error: '更新超时，服务器可能仍在重启中，请稍后手动检查',
-      oldCommit: oldCommit,
-    );
+    // 阶段2：等待服务重新上线
+    if (wentDown) {
+      onStatus?.call('服务器正在重启，等待恢复...');
+      for (int i = 0; i < upAttempts; i++) {
+        await Future.delayed(interval);
+        try {
+          final resp = await healthDio.get('/api/health');
+          if (resp.statusCode == 200 && resp.data['healthy'] == true) {
+            onStatus?.call('服务器已重启，正在获取更新结果...');
+            break;
+          }
+        } catch (_) {}
+        onStatus?.call('等待服务器启动... (${i + 1}/$upAttempts)');
+      }
+    }
+
+    // 阶段3：读取更新结果
+    try {
+      final statusResp = await ApiClient().dio.get('/api/update/server_status');
+      if (statusResp.statusCode == 200) {
+        final newCommit = statusResp.data['current_commit'] as String?;
+        final deployLog = statusResp.data['deploy_log'] as String?;
+        // 如果服务没下线且 commit 没变，说明更新脚本可能未执行到 restart
+        if (!wentDown && newCommit == oldCommit) {
+          return ServerUpdateResult(
+            success: false,
+            oldCommit: oldCommit,
+            error: '服务器未重启，更新可能未完成。请检查服务器日志。',
+            deployLog: deployLog,
+          );
+        }
+        return ServerUpdateResult(
+          success: true,
+          oldCommit: oldCommit,
+          newCommit: newCommit,
+          deployLog: deployLog,
+        );
+      }
+    } catch (_) {}
+    if (!wentDown) {
+      return ServerUpdateResult(
+        success: false,
+        oldCommit: oldCommit,
+        error: '服务器未在预期时间内重启，请稍后手动检查',
+      );
+    }
+    return ServerUpdateResult(success: true, oldCommit: oldCommit);
   }
 }
