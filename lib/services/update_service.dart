@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -193,12 +192,7 @@ extension ServerUpdate on UpdateService {
       connectTimeout: const Duration(seconds: 5),
       receiveTimeout: const Duration(seconds: 5),
     ));
-    healthDio.httpClientAdapter = IOHttpClientAdapter(
-      onHttpClientCreate: (client) {
-        client.badCertificateCallback = (cert, host, port) => true;
-        return client;
-      },
-    );
+    ApiClient.applyCertificatePinning(healthDio);
 
     const maxAttempts = 20;
     const interval = Duration(seconds: 3);

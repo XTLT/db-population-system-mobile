@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:flutter/material.dart';
+import '../api/api_client.dart';
 
 
 class SimpleConnectionTest {
@@ -19,11 +19,8 @@ class SimpleConnectionTest {
       },
     ));
     
-    // 配置HTTP客户端以允许自签名证书
-    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
-      client.badCertificateCallback = (cert, host, port) => true;
-      return client;
-    };
+    // 证书钉扎（与 ApiClient 共用）
+    ApiClient.applyCertificatePinning(dio);
     
     debugPrint('========== 简单连接测试 ==========');
     debugPrint('URL: $url');

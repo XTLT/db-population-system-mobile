@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import '../../providers/auth_provider.dart';
 import '../home/home_page.dart';
 import '../../config/app_config.dart';
+import '../../api/api_client.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -233,12 +233,8 @@ class _LoginPageState extends State<LoginPage> {
       dio.options.connectTimeout = const Duration(seconds: 10);
       dio.options.receiveTimeout = const Duration(seconds: 10);
       
-      // 允许自签名证书
-      (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
-        client.connectionTimeout = const Duration(seconds: 10);
-        client.badCertificateCallback = (cert, host, port) => true;
-        return client;
-      };
+      // 证书钉扎（与 ApiClient 共用）
+      ApiClient.applyCertificatePinning(dio);
       
       final url = AppConfig.apiBaseUrl;
       

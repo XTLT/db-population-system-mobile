@@ -1,6 +1,6 @@
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import '../config/app_config.dart';
+import '../api/api_client.dart';
 import 'dart:io';
 
 class DomainService {
@@ -11,11 +11,7 @@ class DomainService {
       receiveTimeout: const Duration(seconds: 5),
     ));
 
-    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
-      client.connectionTimeout = const Duration(seconds: 5);
-      client.badCertificateCallback = (cert, host, port) => true;
-      return client;
-    };
+    ApiClient.applyCertificatePinning(dio);
 
     return dio;
   }

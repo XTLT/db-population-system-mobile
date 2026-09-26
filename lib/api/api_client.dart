@@ -1,8 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:crypto/crypto.dart';
 import '../config/app_config.dart';
 import '../services/network_cache.dart';
 import '../services/domain_service.dart';
@@ -15,6 +17,7 @@ class ApiClient {
   late Dio _dio;
   String? _token;
   String? _effectiveBaseUrl; // 回退成功后缓存，避免每次请求都重试
+  String? _pinnedCertFingerprint; // 服务器证书 SHA-256 指纹（从 assets 加载）
 
   final Map<String, int> _activeRequests = {};
   static const int _maxConcurrentRequests = 20;  
@@ -33,7 +36,8 @@ class ApiClient {
       },
     ));
     
-    // 证书固定：从 assets 加载服务端证书
+    // 证书固定：从 assets 加载服务端证书指纹
+    _loadPinnedCert();
     _initCertificatePinning();
     
     debugPrint('ApiClient 初始化，baseUrl: ${AppConfig.apiBaseUrl}');
@@ -203,40 +207,70 @@ class ApiClient {
     ));
   }
   
-  /// 初始化证书固定
-  /// 
-  /// 安全方案：
-  /// 1. 如果 assets/certs/server.crt 存在，使用该证书验证（推荐）
-  /// 2. 如果不存在，允许所有证书（开发/测试环境）
-  /// 
-  /// 部署时请将服务端的 server.crt 复制到 mobile/assets/certs/ 目录
-  /// 并在 pubspec.yaml 中添加 assets 配置
-  void _initCertificatePinning() {
-    (_dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
-      client.connectionTimeout = const Duration(seconds: 15);
-      
-      // 尝试加载本地证书
-      try {
-        final SecurityContext securityContext = SecurityContext();
-        // 从 assets 加载证书
-        final certData = rootBundle.load('assets/certs/server.crt');
-        certData.then((data) {
-          securityContext.setTrustedCertificatesBytes(data.buffer.asUint8List());
-          debugPrint('已加载服务端证书，启用证书固定验证');
-        }).catchError((e) {
-          debugPrint('未找到本地证书，跳过证书固定: $e');
-        });
-      } catch (e) {
-        debugPrint('证书加载失败，跳过证书固定: $e');
-      }
-      
-      // 如果证书加载失败，允许自签名证书（开发环境）
-      // 生产环境应该有证书文件
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-        debugPrint('警告: 跳过证书验证 (host: $host)');
+  /// 从 assets 加载服务器证书，计算 SHA-256 指纹用于钉扎验证
+  Future<void> _loadPinnedCert() async {
+    try {
+      final data = await rootBundle.load('assets/certs/server.crt');
+      final pemStr = String.fromCharCodes(data.buffer.asUint8List());
+      final derBytes = _pemToDer(pemStr);
+      _pinnedCertFingerprint = sha256.convert(derBytes).toString();
+      debugPrint('证书钉扎: 已加载服务器证书指纹');
+    } catch (e) {
+      debugPrint('证书钉扎: 加载证书失败: $e');
+    }
+  }
+
+  /// PEM 转 DER（去头尾、Base64 解码）
+  Uint8List _pemToDer(String pem) {
+    final lines = pem.split('\n');
+    final b64 = lines
+        .where((l) => !l.startsWith('-----') && l.trim().isNotEmpty)
+        .join();
+    return base64.decode(b64);
+  }
+
+  /// 验证服务器证书是否与钉扎证书匹配
+  bool _verifyPinnedCert(X509Certificate cert, String host) {
+    if (_pinnedCertFingerprint == null) {
+      debugPrint('证书钉扎: 指纹未加载，拒绝连接 (host: $host)');
+      return false;
+    }
+    try {
+      final serverFp = sha256.convert(cert.der).toString();
+      if (serverFp == _pinnedCertFingerprint) {
         return true;
+      }
+      debugPrint('证书钉扎: 证书不匹配 (host: $host)');
+    } catch (e) {
+      debugPrint('证书钉扎: 验证异常 (host: $host): $e');
+    }
+    return false;
+  }
+
+  /// 为外部 Dio 实例（如 healthDio）设置证书钉扎
+  static void applyCertificatePinning(Dio dio) {
+    dio.httpClientAdapter = IOHttpClientAdapter(
+      onHttpClientCreate: (client) {
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+          return _instance._verifyPinnedCert(cert, host);
+        };
+        return client;
+      },
+    );
+  }
+
+  /// 初始化证书固定
+  ///
+  /// 安全方案：
+  /// 1. 从 assets/certs/server.crt 加载证书，计算 SHA-256 指纹
+  /// 2. badCertificateCallback 中比对服务器证书指纹，匹配才放行
+  /// 3. 证书未加载时拒绝所有连接（fail closed）
+  void _initCertificatePinning() {
+    (_dio.httpClientAdapter as IOHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
+      client.connectionTimeout = const Duration(seconds: 15);
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        return _verifyPinnedCert(cert, host);
       };
-      
       return client;
     };
   }
@@ -305,10 +339,7 @@ class ApiClient {
         connectTimeout: const Duration(seconds: 5),
         receiveTimeout: const Duration(seconds: 5),
       ));
-      (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate = (client) {
-        client.badCertificateCallback = (cert, host, port) => true;
-        return client;
-      };
+      applyCertificatePinning(dio);
       final response = await dio.get('$url/api/health');
       return response.statusCode == 200;
     } catch (e) {
