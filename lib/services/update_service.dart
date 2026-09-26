@@ -128,8 +128,23 @@ class UpdateService {
       if (!Platform.isAndroid) return false;
 
       final channel = MethodChannel('com.population/install_apk');
-      final result = await channel.invokeMethod<bool>('installApk', {'path': filePath});
-      return result ?? false;
+      await channel.invokeMethod<bool>('installApk', {'path': filePath});
+
+      for (int i = 0; i < 60; i++) {
+        await Future.delayed(const Duration(seconds: 1));
+        try {
+          final res = await channel.invokeMethod<Map>('getInstallResult');
+          if (res != null) {
+            final status = res['status'] as String?;
+            if (status == 'success') return true;
+            if (status == 'error') {
+              debugPrint('安装失败: ${res['message']}');
+              return false;
+            }
+          }
+        } catch (_) {}
+      }
+      return true;
     } catch (e) {
       debugPrint('安装APK失败: $e');
       return false;

@@ -10,7 +10,6 @@ import '../notification/notification_center_page.dart';
 import 'person_list_page.dart';
 import '../student/student_list_page.dart';
 import 'stats_page.dart';
-import '../../widgets/update_dialog.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -25,11 +24,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<NotificationProvider>().loadUnreadCount();
       context.read<SyncProvider>().init();
-      UpdateDialog.showIfNeeded(context);
     });
   }
   
