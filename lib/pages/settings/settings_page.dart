@@ -511,7 +511,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: ListTile(
                         leading: const Icon(Icons.cloud_sync, color: Colors.teal),
                         title: const Text('服务器代码更新'),
-                        subtitle: const Text('从Gitee拉取最新代码并重启服务器'),
+                        subtitle: const Text('从GitHub拉取最新代码并重启服务器'),
                         trailing: const Icon(Icons.arrow_forward),
                         onTap: () => _showServerUpdateDialog(context),
                       ),
