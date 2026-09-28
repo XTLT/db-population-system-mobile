@@ -312,7 +312,7 @@ class _PersonStatsTab extends StatelessWidget {
             const Divider(),
             _buildStatRow('低保人员', dibaoCount, Colors.orange, onTap: () {
               Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '最低生活保障家庭'),
+                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '是,低保边缘家庭,特困家庭'),
               ));
             }),
             const Divider(),
