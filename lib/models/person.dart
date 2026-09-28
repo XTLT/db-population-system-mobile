@@ -74,6 +74,8 @@ class Person {
   final String? socialCard1;
   final String? socialCard2;
   final String? socialCard3;
+  final String? socialCard2Source;
+  final String? socialCard3Source;
   final String? isMigrated;
   final String? landArea;
   final String? localWelfareForestArea;
@@ -109,6 +111,8 @@ class Person {
     this.socialCard1,
     this.socialCard2,
     this.socialCard3,
+    this.socialCard2Source,
+    this.socialCard3Source,
     this.isMigrated,
     this.landArea,
     this.localWelfareForestArea,
@@ -146,6 +150,8 @@ class Person {
       socialCard1: json['social_card1'],
       socialCard2: json['social_card2'],
       socialCard3: json['social_card3'],
+      socialCard2Source: json['social_card2_source'],
+      socialCard3Source: json['social_card3_source'],
       isMigrated: json['is_migrated'],
       landArea: json['land_area'],
       localWelfareForestArea: json['local_welfare_forest_area'],
@@ -185,6 +191,8 @@ class Person {
       'social_card1': socialCard1,
       'social_card2': socialCard2,
       'social_card3': socialCard3,
+      'social_card2_source': socialCard2Source,
+      'social_card3_source': socialCard3Source,
       'is_migrated': isMigrated,
       'land_area': landArea,
       'local_welfare_forest_area': localWelfareForestArea,

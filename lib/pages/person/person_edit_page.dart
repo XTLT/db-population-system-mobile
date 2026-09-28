@@ -98,6 +98,13 @@ class _PersonEditPageState extends State<PersonEditPage> {
     if (_oldGradeToCode.containsKey(grade)) return _oldGradeToCode[grade];
     return grade;
   }
+
+  // 社保卡号2/3 仅由补贴导入自动回填，展示为 卡号+来源（如 6217********（低保202606））
+  String _socialCardDisplay(String? card, String? source) {
+    if (card == null || card.isEmpty || card == '无') return '';
+    final s = (source != null && source.isNotEmpty) ? '（$source）' : '';
+    return '$card$s';
+  }
   
   bool _isLoading = false;
   bool _autoFillFromIdCard = false;
@@ -125,8 +132,8 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _nationalWelfareForestAreaController = TextEditingController(text: widget.person?.nationalWelfareForestArea ?? '');
     _commercialForestAreaController = TextEditingController(text: widget.person?.commercialForestArea ?? '');
     _socialCard1Controller = TextEditingController(text: widget.person?.socialCard1 ?? '');
-    _socialCard2Controller = TextEditingController(text: widget.person?.socialCard2 ?? '');
-    _socialCard3Controller = TextEditingController(text: widget.person?.socialCard3 ?? '');
+    _socialCard2Controller = TextEditingController(text: _socialCardDisplay(widget.person?.socialCard2, widget.person?.socialCard2Source));
+    _socialCard3Controller = TextEditingController(text: _socialCardDisplay(widget.person?.socialCard3, widget.person?.socialCard3Source));
 
     
     _schoolNameController = TextEditingController(text: widget.person?.education?.schoolName ?? '');
@@ -592,8 +599,6 @@ class _PersonEditPageState extends State<PersonEditPage> {
         'tekun': _tekun,
         'tekun_type': _tekunType,
         'social_card1': _socialCard1Controller.text.trim(),
-        'social_card2': _socialCard2Controller.text.trim(),
-        'social_card3': _socialCard3Controller.text.trim(),
         'land_area': newLandArea,
         'land_area_change_reason': _landAreaChangeReason ?? '',
         'local_welfare_forest_area': newLocalWelfareForestArea,
@@ -901,13 +906,13 @@ class _PersonEditPageState extends State<PersonEditPage> {
                     ),
                     _buildTextField(
                       controller: _socialCard2Controller,
-                      label: '社保卡号2',
-                      validator: Validators.validateSocialCard,
+                      label: '社保卡号2（自动回填）',
+                      readOnly: true,
                     ),
                     _buildTextField(
                       controller: _socialCard3Controller,
-                      label: '社保卡号3',
-                      validator: Validators.validateSocialCard,
+                      label: '社保卡号3（自动回填）',
+                      readOnly: true,
                     ),
                   ]),
 
@@ -1057,12 +1062,14 @@ class _PersonEditPageState extends State<PersonEditPage> {
     List<TextInputFormatter>? inputFormatters,
     int maxLines = 1,
     bool enabled = true,
+    bool readOnly = false,
     String? hintText,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
+        readOnly: readOnly,
         decoration: InputDecoration(
           labelText: label,
           hintText: hintText,

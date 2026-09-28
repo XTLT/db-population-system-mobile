@@ -264,8 +264,8 @@ class _PersonDetailPageState extends State<PersonDetailPage>
 
           _buildInfoSection('社保卡信息', [
             _buildInfoItem('社保卡号1', person.socialCard1, copyable: true),
-            _buildInfoItem('社保卡号2', person.socialCard2, copyable: true),
-            _buildInfoItem('社保卡号3', person.socialCard3, copyable: true),
+            _buildInfoItem('社保卡号2', _socialCardWithSource(person.socialCard2, person.socialCard2Source), copyable: true),
+            _buildInfoItem('社保卡号3', _socialCardWithSource(person.socialCard3, person.socialCard3Source), copyable: true),
           ]),
 
           
@@ -593,6 +593,13 @@ class _PersonDetailPageState extends State<PersonDetailPage>
   }
 }
 
+
+// 社保卡号2/3 仅由补贴导入自动回填，展示为 卡号+来源（如 6217********（低保202606））
+String? _socialCardWithSource(String? card, String? source) {
+  if (card == null || card.isEmpty || card == '无') return null;
+  final s = (source != null && source.isNotEmpty) ? '（$source）' : '';
+  return '$card$s';
+}
 
 String? _gradeDisplay(String? grade) {
   if (grade == null || grade.isEmpty) return null;
