@@ -10,6 +10,8 @@ import '../person/filtered_person_list_page.dart';
 import '../subsidy/monthly_payment_query_page.dart';
 import '../subsidy/dibao_query_page.dart';
 import '../subsidy/tekun_query_page.dart';
+import '../subsidy/disability_care_query_page.dart';
+import '../subsidy/elderly_allowance_query_page.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -973,6 +975,38 @@ class _SubsidyStatsTab extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const MonthlyPaymentQueryPage()),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.indigo.shade50,
+                child: Icon(Icons.accessible, color: Colors.indigo.shade700),
+              ),
+              title: const Text('残疾人护理补贴查询'),
+              subtitle: const Text('按月查询残疾人护理补贴打款金额和卡号'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const DisabilityCareQueryPage()),
+                );
+              },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: CircleAvatar(
+                backgroundColor: Colors.blueGrey.shade50,
+                child: Icon(Icons.elderly_woman, color: Colors.blueGrey.shade700),
+              ),
+              title: const Text('高龄补贴查询'),
+              subtitle: const Text('按月查询高龄补贴打款金额和卡号'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ElderlyAllowanceQueryPage()),
                 );
               },
             ),

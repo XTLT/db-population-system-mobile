@@ -375,4 +375,79 @@ class StatisticsApi {
       throw Exception('获取特困统计失败: $e');
     }
   }
+
+  /// 获取残疾人护理补贴可用月份列表
+  static Future<List<String>> getDisabilityCarePaymentPeriods() async {
+    try {
+      final response = await _dio.get('/api/disability_care_payment/periods');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['periods'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 查询残疾人护理补贴发放记录（按月份+身份证号/姓名）
+  static Future<List<Map<String, dynamic>>> queryDisabilityCarePayments({
+    String? period,
+    String? idCard,
+    String? name,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
+      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
+      if (name != null && name.isNotEmpty) queryParams['name'] = name;
+      final response = await _dio.get('/api/disability_care_payment', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final records = response.data['records'];
+        if (records is List) {
+          return records.cast<Map<String, dynamic>>();
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 获取高龄补贴可用月份列表
+  static Future<List<String>> getElderlyAllowancePeriods() async {
+    try {
+      final response = await _dio.get('/api/elderly_allowance/periods');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['periods'] ?? []);
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// 查询高龄补贴发放记录（按月份+身份证号/姓名）
+  static Future<List<Map<String, dynamic>>> queryElderlyAllowances({
+    String? period,
+    String? idCard,
+    String? name,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
+      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
+      if (name != null && name.isNotEmpty) queryParams['name'] = name;
+      final response = await _dio.get('/api/elderly_allowance', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final records = response.data['records'];
+        if (records is List) {
+          return records.cast<Map<String, dynamic>>();
+        }
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 }
+
