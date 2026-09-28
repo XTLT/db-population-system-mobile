@@ -251,7 +251,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
 
       
       if (enrollmentDate.isEmpty) {
-        enrollmentDate = '$enrollmentYear-09';
+        enrollmentDate = '$enrollmentYear-09-01';
       }
 
       
@@ -261,7 +261,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
           
           
           final gradYear = enrollmentYear + totalYears;
-          graduationDate = '$gradYear-06';
+          graduationDate = '$gradYear-06-30';
         }
       }
     }
@@ -956,12 +956,12 @@ class _PersonEditPageState extends State<PersonEditPage> {
                     _buildTextField(
                       controller: _enrollmentDateController,
                       label: '入学日期',
-                      hintText: '自动计算，如：2023-09',
+                      hintText: '自动计算，如：2023-09-01',
                     ),
                     _buildTextField(
                       controller: _graduationDateController,
                       label: '毕业时间',
-                      hintText: '自动计算，如：2029-06',
+                      hintText: '自动计算，如：2029-06-30',
                     ),
                   ]),
 
