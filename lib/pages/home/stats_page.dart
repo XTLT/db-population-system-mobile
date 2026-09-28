@@ -1123,10 +1123,12 @@ class _SubsidyStatsTab extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            _buildForestStatHeader(),
+            const Divider(height: 20),
             _buildForestStatRow('地方公益林', totalLocal, avgLocal, Colors.green),
-            const Divider(height: 24),
+            const Divider(height: 20),
             _buildForestStatRow('国家公益林', totalNational, avgNational, Colors.blue),
-            const Divider(height: 24),
+            const Divider(height: 20),
             _buildForestStatRow('非国有天然商品林', totalCommercial, avgCommercial, Colors.orange),
           ],
         ),
@@ -1134,49 +1136,88 @@ class _SubsidyStatsTab extends StatelessWidget {
     );
   }
 
+  Widget _buildForestStatHeader() {
+    return const Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Text(
+            '林种',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Text(
+            '总面积(亩)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Text(
+            '人均(亩)',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildForestStatRow(String label, double total, double avg, Color color) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Column(
-          children: [
-            Text(
-              total.toStringAsFixed(2),
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$label总面积（亩）',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
+        Expanded(
+          flex: 3,
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+          ),
         ),
-        Column(
-          children: [
-            Text(
-              avg.toStringAsFixed(2),
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: [
+              Text(
+                total.toStringAsFixed(2),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
               ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$label人均（亩）',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
+              const SizedBox(height: 2),
+              const Text(
+                '总面积',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
               ),
-            ),
-          ],
+            ],
+          ),
+        ),
+        Expanded(
+          flex: 2,
+          child: Column(
+            children: [
+              Text(
+                avg.toStringAsFixed(2),
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              const Text(
+                '人均',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ],
+          ),
         ),
       ],
     );
