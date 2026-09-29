@@ -146,36 +146,6 @@ class StatisticsApi {
     }
   }
 
-  /// 获取待遇发放统计
-  static Future<Map<String, dynamic>> getTreatmentPaymentStatistics() async {
-    try {
-      final response = await _dio.get('/api/treatment_payment/statistics');
-
-      if (response.statusCode == 200) {
-        return response.data;
-      } else {
-        throw Exception('获取待遇发放统计失败');
-      }
-    } catch (e) {
-      throw Exception('获取待遇发放统计失败: $e');
-    }
-  }
-
-  /// 获取养老保险统计
-  static Future<Map<String, dynamic>> getPensionInsuranceStatistics() async {
-    try {
-      final response = await _dio.get('/api/pension_insurance/statistics');
-
-      if (response.statusCode == 200) {
-        return response.data;
-      } else {
-        throw Exception('获取养老保险统计失败');
-      }
-    } catch (e) {
-      throw Exception('获取养老保险统计失败: $e');
-    }
-  }
-
   /// 获取待遇发放年份列表
   static Future<List<String>> getTreatmentPaymentYears() async {
     try {
@@ -347,32 +317,6 @@ class StatisticsApi {
       return [];
     } catch (e) {
       return [];
-    }
-  }
-
-  /// 获取低保发放统计
-  static Future<Map<String, dynamic>> getDibaoPaymentStatistics() async {
-    try {
-      final response = await _dio.get('/api/dibao_payment/statistics');
-      if (response.statusCode == 200) {
-        return response.data;
-      }
-      throw Exception('获取低保统计失败');
-    } catch (e) {
-      throw Exception('获取低保统计失败: $e');
-    }
-  }
-
-  /// 获取特困发放统计
-  static Future<Map<String, dynamic>> getTekunPaymentStatistics() async {
-    try {
-      final response = await _dio.get('/api/tekun_payment/statistics');
-      if (response.statusCode == 200) {
-        return response.data;
-      }
-      throw Exception('获取特困统计失败');
-    } catch (e) {
-      throw Exception('获取特困统计失败: $e');
     }
   }
 

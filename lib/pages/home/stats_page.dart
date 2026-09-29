@@ -314,7 +314,7 @@ class _PersonStatsTab extends StatelessWidget {
             const Divider(),
             _buildStatRow('低保人员', dibaoCount, Colors.orange, onTap: () {
               Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '是,低保边缘家庭,特困家庭'),
+                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '是,低保边缘家庭,特困家庭,最低生活保障家庭,最低生活保障边缘家庭,单人保家庭'),
               ));
             }),
             const Divider(),
@@ -1145,12 +1145,12 @@ class _SubsidyStatsTab extends StatelessWidget {
   }
 
   Widget _buildForestAreaStats() {
-    final totalLocal = (personStats?['total_local_welfare_forest_area'] ?? 0).toDouble();
-    final avgLocal = (personStats?['avg_local_welfare_forest_area'] ?? 0).toDouble();
-    final totalNational = (personStats?['total_national_welfare_forest_area'] ?? 0).toDouble();
-    final avgNational = (personStats?['avg_national_welfare_forest_area'] ?? 0).toDouble();
-    final totalCommercial = (personStats?['total_commercial_forest_area'] ?? 0).toDouble();
-    final avgCommercial = (personStats?['avg_commercial_forest_area'] ?? 0).toDouble();
+    final totalLocal = num.tryParse((personStats?['total_local_welfare_forest_area'] ?? 0).toString())?.toDouble() ?? 0.0;
+    final avgLocal = num.tryParse((personStats?['avg_local_welfare_forest_area'] ?? 0).toString())?.toDouble() ?? 0.0;
+    final totalNational = num.tryParse((personStats?['total_national_welfare_forest_area'] ?? 0).toString())?.toDouble() ?? 0.0;
+    final avgNational = num.tryParse((personStats?['avg_national_welfare_forest_area'] ?? 0).toString())?.toDouble() ?? 0.0;
+    final totalCommercial = num.tryParse((personStats?['total_commercial_forest_area'] ?? 0).toString())?.toDouble() ?? 0.0;
+    final avgCommercial = num.tryParse((personStats?['avg_commercial_forest_area'] ?? 0).toString())?.toDouble() ?? 0.0;
 
     return Card(
       child: Padding(
@@ -1191,7 +1191,7 @@ class _SubsidyStatsTab extends StatelessWidget {
         Expanded(
           flex: 2,
           child: Text(
-            '人均(亩)',
+            '有林地户均(亩)',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
           ),

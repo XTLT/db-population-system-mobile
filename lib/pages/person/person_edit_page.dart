@@ -848,16 +848,49 @@ class _PersonEditPageState extends State<PersonEditPage> {
                         },
                       ),
                     ],
-                    _buildDropdown(
-                      value: _dibao,
-                      label: '低保',
-                      items: const ['', '是', '否', '低保边缘家庭', '特困家庭'],
-                      onChanged: (value) {
-                        setState(() {
-                          _dibao = value;
-                        });
-                      },
-                    ),
+                    // 低保口径统一为 6 值（与服务端 statistics.py 对齐），并对库中未知历史值做兜底：
+                    // 下拉 value 回落到 ''（请选择），同时只读提示历史原值，避免 Debug 断言崩溃；
+                    // 用户未重新选择时 _dibao 仍保留原始历史值，保存不丢数据。
+                    Builder(builder: (_) {
+                      const dibaoItems = [
+                        '',
+                        '是',
+                        '否',
+                        '低保边缘家庭',
+                        '特困家庭',
+                        '最低生活保障家庭',
+                        '最低生活保障边缘家庭',
+                        '单人保家庭',
+                      ];
+                      final dibaoRaw = _dibao ?? '';
+                      final dibaoKnown =
+                          dibaoRaw.isEmpty || dibaoItems.contains(dibaoRaw);
+                      final dibaoValue = dibaoKnown ? dibaoRaw : '';
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildDropdown(
+                            value: dibaoValue,
+                            label: '低保',
+                            items: dibaoItems,
+                            onChanged: (value) {
+                              setState(() {
+                                _dibao = value;
+                              });
+                            },
+                          ),
+                          if (!dibaoKnown)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16, left: 4),
+                              child: Text(
+                                '历史值：$dibaoRaw（不在标准选项中，已保留原值，请重新选择以更新）',
+                                style: TextStyle(
+                                    fontSize: 12, color: Colors.orange.shade700),
+                              ),
+                            ),
+                        ],
+                      );
+                    }),
                     _buildDropdown(
                       value: _jisheng,
                       label: '是否计生家庭',
