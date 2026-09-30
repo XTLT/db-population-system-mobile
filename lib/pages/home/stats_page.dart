@@ -1085,8 +1085,8 @@ class _SubsidyStatsTab extends StatelessWidget {
 
 
   Widget _buildLandAreaStats() {
-    final totalLandArea = personStats?['total_land_area'] ?? 0;
-    final avgLandArea = personStats?['avg_land_area'] ?? 0;
+    final totalLandArea = num.tryParse((personStats?['total_land_area'] ?? 0).toString())?.toDouble() ?? 0.0;
+    final avgLandArea = num.tryParse((personStats?['avg_land_area'] ?? 0).toString())?.toDouble() ?? 0.0;
 
     return Card(
       child: Padding(
