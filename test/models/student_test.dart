@@ -128,5 +128,96 @@ void main() {
       final graduated = Student(studentStatus: '毕业');
       expect(graduated.studentStatus, '毕业');
     });
+
+    // ===== 以下为本次新增：全字段 fromJson + toJson 往返 =====
+
+    test('fromJson 应解析全部 11 个字段（含 graduation_date）', () {
+      final json = {
+        'id_card': '110101201005051234',
+        'name': '孙小鹿',
+        'school_name': '天河外国语学校',
+        'grade': 'G9',
+        'class_name': '6班',
+        'guardian': '孙父',
+        'guardian_phone': '13200132000',
+        'is_left_behind': '否',
+        'student_status': '在读',
+        'enrollment_date': '2021-09-01',
+        'graduation_date': '2027-06-30',
+      };
+
+      final s = Student.fromJson(json);
+
+      expect(s.idCard, '110101201005051234');
+      expect(s.name, '孙小鹿');
+      expect(s.schoolName, '天河外国语学校');
+      expect(s.grade, 'G9');
+      expect(s.className, '6班');
+      expect(s.guardian, '孙父');
+      expect(s.guardianPhone, '13200132000');
+      expect(s.isLeftBehind, '否');
+      expect(s.studentStatus, '在读');
+      expect(s.enrollmentDate, '2021-09-01');
+      expect(s.graduationDate, '2027-06-30');
+    });
+
+    test('fromJson 缺省时所有字段为 null（含 graduation_date）', () {
+      final s = Student.fromJson(<String, dynamic>{});
+      expect(s.idCard, isNull);
+      expect(s.name, isNull);
+      expect(s.schoolName, isNull);
+      expect(s.grade, isNull);
+      expect(s.className, isNull);
+      expect(s.guardian, isNull);
+      expect(s.guardianPhone, isNull);
+      expect(s.isLeftBehind, isNull);
+      expect(s.studentStatus, isNull);
+      expect(s.enrollmentDate, isNull);
+      expect(s.graduationDate, isNull);
+    });
+
+    test('toJson 往返应与构造字段一一对应（对称）', () {
+      final s = Student(
+        idCard: '110101201106061234',
+        name: '周小木',
+        schoolName: '深圳实验学校',
+        grade: 'G10',
+        className: '8班',
+        guardian: '周母',
+        guardianPhone: '13300133000',
+        isLeftBehind: '是',
+        studentStatus: '休学',
+        enrollmentDate: '2020-09-01',
+        graduationDate: '2028-06-30',
+      );
+
+      final json = s.toJson();
+
+      expect(json['id_card'], '110101201106061234');
+      expect(json['name'], '周小木');
+      expect(json['school_name'], '深圳实验学校');
+      expect(json['grade'], 'G10');
+      expect(json['class_name'], '8班');
+      expect(json['guardian'], '周母');
+      expect(json['guardian_phone'], '13300133000');
+      expect(json['is_left_behind'], '是');
+      expect(json['student_status'], '休学');
+      expect(json['enrollment_date'], '2020-09-01');
+      expect(json['graduation_date'], '2028-06-30');
+
+      // 往返：toJson -> fromJson 字段一致
+      final back = Student.fromJson(json);
+      expect(back.idCard, s.idCard);
+      expect(back.name, s.name);
+      expect(back.schoolName, s.schoolName);
+      expect(back.grade, s.grade);
+      expect(back.className, s.className);
+      expect(back.guardian, s.guardian);
+      expect(back.guardianPhone, s.guardianPhone);
+      expect(back.isLeftBehind, s.isLeftBehind);
+      expect(back.studentStatus, s.studentStatus);
+      expect(back.enrollmentDate, s.enrollmentDate);
+      expect(back.graduationDate, s.graduationDate);
+    });
   });
 }

@@ -158,9 +158,14 @@ class PhotoService {
   }
   
   
+  // 6c：桩实现（stub），原样返回入参 File。
+  // 结论：pubspec 现有依赖中没有可做像素级重编码的图像库（无 image / flutter_image_compress），
+  //   dart:io 无法直接解码/重编码 JPEG/PNG，故无法仅靠现有依赖实现真正压缩，也不引新依赖。
+  //   注：pickPhoto/pickMultiplePhotos 在选图时已通过 image_picker 的
+  //   maxWidth:1920 / maxHeight:1920 / imageQuality:85 完成尺寸与质量压缩，
+  //   本方法作为二次压缩预留位。
+  // TODO(stub): 如需进一步压缩，引入 image（纯 Dart）或 flutter_image_compress（原生）后在此实现。
   static Future<File?> compressImage(File imageFile) async {
-    
-    
     return imageFile;
   }
 

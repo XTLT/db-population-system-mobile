@@ -1,6 +1,7 @@
 
 library;
 
+import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
@@ -80,13 +81,23 @@ class ImportExportApi {
         throw Exception('导出失败: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      
-      if (e.response?.data != null && e.response?.data is! List<int>) {
-        
-        final errorMsg = e.response?.data?['error'] ?? e.message ?? '未知错误';
-        throw Exception(errorMsg);
+      // responseType.bytes 下错误响应体是 Uint8List（属于 List<int>），
+      // 需先 utf8.decode + jsonDecode 才能取出服务端 JSON 里的 error。
+      final data = e.response?.data;
+      String? errorMsg;
+      if (data is List<int>) {
+        try {
+          final decoded =
+              jsonDecode(utf8.decode(data)) as Map<String, dynamic>?;
+          errorMsg = decoded?['error']?.toString();
+        } catch (_) {
+          errorMsg = null;
+        }
+      } else if (data is Map<String, dynamic>) {
+        errorMsg = data['error']?.toString();
       }
-      throw Exception('导出失败: ${e.message ?? '未知错误'}');
+      errorMsg ??= e.message ?? '未知错误';
+      throw Exception('导出失败: $errorMsg');
     } catch (e) {
       throw Exception('导出失败: $e');
     }
@@ -118,11 +129,23 @@ class ImportExportApi {
         throw Exception('导出失败: ${response.statusCode}');
       }
     } on DioException catch (e) {
-      if (e.response?.data != null && e.response?.data is! List<int>) {
-        final errorMsg = e.response?.data?['error'] ?? e.message ?? '未知错误';
-        throw Exception(errorMsg);
+      // responseType.bytes 下错误响应体是 Uint8List（属于 List<int>），
+      // 需先 utf8.decode + jsonDecode 才能取出服务端 JSON 里的 error。
+      final data = e.response?.data;
+      String? errorMsg;
+      if (data is List<int>) {
+        try {
+          final decoded =
+              jsonDecode(utf8.decode(data)) as Map<String, dynamic>?;
+          errorMsg = decoded?['error']?.toString();
+        } catch (_) {
+          errorMsg = null;
+        }
+      } else if (data is Map<String, dynamic>) {
+        errorMsg = data['error']?.toString();
       }
-      throw Exception('导出失败: ${e.message ?? '未知错误'}');
+      errorMsg ??= e.message ?? '未知错误';
+      throw Exception('导出失败: $errorMsg');
     } catch (e) {
       throw Exception('导出失败: $e');
     }

@@ -31,11 +31,25 @@ class _TekunQueryPageState extends State<TekunQueryPage> {
   }
 
   Future<void> _loadPeriods() async {
-    final periods = await StatisticsApi.getTekunPaymentPeriods();
-    setState(() {
-      _periods = ['全部', ...periods];
-      _selectedPeriod = '全部';
-    });
+    try {
+      final periods = await StatisticsApi.getTekunPaymentPeriods();
+      if (mounted) {
+        setState(() {
+          _periods = ['全部', ...periods];
+          _selectedPeriod = '全部';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _periods = ['全部'];
+          _selectedPeriod = '全部';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('期数加载失败: $e')),
+        );
+      }
+    }
   }
 
   Future<void> _doSearch() async {

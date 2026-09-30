@@ -56,11 +56,20 @@ class OfflineOperation {
   factory OfflineOperation.fromJson(Map<String, dynamic> json) =>
       OfflineOperation(
         id: json['id'],
-        type: OperationType.values.firstWhere((e) => e.name == json['type']),
+        // BUG-05：枚举匹配加 orElse 兜底，避免旧/损坏缓存里缺省或未知值抛 StateError。
+        // 未知 type 回落到 update（非破坏性默认：不删记录、不盲目新增）。
+        type: OperationType.values.firstWhere(
+          (e) => e.name == json['type'],
+          orElse: () => OperationType.update,
+        ),
         entityType: json['entity_type'],
         entityId: json['entity_id'],
         data: Map<String, dynamic>.from(json['data']),
-        status: SyncStatus.values.firstWhere((e) => e.name == json['status']),
+        // 缺省/未知 status 回落到 pending（与构造器默认一致）
+        status: SyncStatus.values.firstWhere(
+          (e) => e.name == json['status'],
+          orElse: () => SyncStatus.pending,
+        ),
         createdAt: DateTime.parse(json['created_at']),
         syncedAt: json['synced_at'] != null
             ? DateTime.parse(json['synced_at'])

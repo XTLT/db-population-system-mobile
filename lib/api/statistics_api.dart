@@ -1,14 +1,15 @@
 
+import 'package:dio/dio.dart';
 import 'api_client.dart';
 
 class StatisticsApi {
   static final _dio = ApiClient().dio;
-  
-  
+
+
   static Future<Map<String, dynamic>> getPersonStatistics() async {
     try {
       final response = await _dio.get('/api/statistics');
-      
+
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -18,12 +19,12 @@ class StatisticsApi {
       throw Exception('获取统计失败: $e');
     }
   }
-  
-  
+
+
   static Future<Map<String, dynamic>> getStudentStatistics() async {
     try {
       final response = await _dio.get('/api/students/statistics');
-      
+
       if (response.statusCode == 200) {
         return response.data;
       } else {
@@ -33,40 +34,50 @@ class StatisticsApi {
       throw Exception('获取学生统计失败: $e');
     }
   }
-  
-  
+
+
   static Future<List<Map<String, dynamic>>> getAgeDistribution() async {
     try {
       final response = await _dio.get('/api/statistics/age_distribution');
-      
+
       if (response.statusCode == 200) {
         final List<dynamic> data = response.data['distribution'] ?? [];
         return data.cast<Map<String, dynamic>>();
-      } else {
-        return [];
       }
-    } catch (e) {
-      return [];
-    }
-  }
-  
-  
-  static Future<List<Map<String, dynamic>>> getVillageStatistics() async {
-    try {
-      final response = await _dio.get('/api/statistics/by_village');
-      
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data['villages'] ?? [];
-        return data.cast<Map<String, dynamic>>();
-      } else {
-        return [];
+      throw Exception('获取年龄分布失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
       }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取年龄分布失败: $e');
     }
   }
 
-  
+
+  static Future<List<Map<String, dynamic>>> getVillageStatistics() async {
+    try {
+      final response = await _dio.get('/api/statistics/by_village');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['villages'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      throw Exception('获取村统计失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
+    } catch (e) {
+      throw Exception('获取村统计失败: $e');
+    }
+  }
+
+
   static Future<Map<String, dynamic>> getTrendData({
     String? startDate,
     String? endDate,
@@ -91,14 +102,14 @@ class StatisticsApi {
     }
   }
 
-  
+
   static Future<Map<String, int>> getDistribution(String field) async {
     try {
       final response = await _dio.get('/api/statistics/distribution', queryParameters: {'field': field});
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = response.data;
-        return data.map((key, value) => MapEntry(key, value as int));
+        return data.map((key, value) => MapEntry(key, (value as num).toInt()));
       } else {
         throw Exception('获取分布数据失败');
       }
@@ -107,12 +118,12 @@ class StatisticsApi {
     }
   }
 
-  
+
   static Future<Map<String, dynamic>> getComparison({List<String>? dimensions}) async {
     try {
       final queryParams = <String, dynamic>{};
       if (dimensions != null && dimensions.isNotEmpty) {
-        
+
         queryParams['dimensions'] = dimensions;
       }
 
@@ -128,7 +139,7 @@ class StatisticsApi {
     }
   }
 
-  
+
   static Future<Map<String, dynamic>> getLandSubsidyStatistics({String? year}) async {
     try {
       final queryParams = <String, dynamic>{};
@@ -153,9 +164,14 @@ class StatisticsApi {
 
       if (response.statusCode == 200) {
         return List<String>.from(response.data['years'] ?? []);
-      } else {
-        throw Exception('获取待遇发放年份数据失败');
       }
+      throw Exception('获取待遇发放年份数据失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
       throw Exception('获取待遇发放年份数据失败: $e');
     }
@@ -168,9 +184,14 @@ class StatisticsApi {
 
       if (response.statusCode == 200) {
         return List<String>.from(response.data['years'] ?? []);
-      } else {
-        throw Exception('获取养老保险年份数据失败');
       }
+      throw Exception('获取养老保险年份数据失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
       throw Exception('获取养老保险年份数据失败: $e');
     }
@@ -183,9 +204,15 @@ class StatisticsApi {
       if (response.statusCode == 200) {
         return List<String>.from(response.data['periods'] ?? []);
       }
-      return [];
+      throw Exception('获取待遇发放月份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取待遇发放月份失败: $e');
     }
   }
 
@@ -196,9 +223,15 @@ class StatisticsApi {
       if (response.statusCode == 200) {
         return List<String>.from(response.data['periods'] ?? []);
       }
-      return [];
+      throw Exception('获取养老保险月份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取养老保险月份失败: $e');
     }
   }
 
@@ -219,9 +252,15 @@ class StatisticsApi {
         final List<dynamic> data = response.data['payments'] ?? [];
         return data.cast<Map<String, dynamic>>();
       }
-      return [];
+      throw Exception('查询待遇发放记录失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('查询待遇发放记录失败: $e');
     }
   }
 
@@ -242,9 +281,15 @@ class StatisticsApi {
         final List<dynamic> data = response.data['records'] ?? [];
         return data.cast<Map<String, dynamic>>();
       }
-      return [];
+      throw Exception('查询养老保险记录失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('查询养老保险记录失败: $e');
     }
   }
 
@@ -255,9 +300,15 @@ class StatisticsApi {
       if (response.statusCode == 200) {
         return List<String>.from(response.data['periods'] ?? []);
       }
-      return [];
+      throw Exception('获取低保发放月份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取低保发放月份失败: $e');
     }
   }
 
@@ -268,9 +319,15 @@ class StatisticsApi {
       if (response.statusCode == 200) {
         return List<String>.from(response.data['periods'] ?? []);
       }
-      return [];
+      throw Exception('获取特困发放月份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取特困发放月份失败: $e');
     }
   }
 
@@ -291,9 +348,15 @@ class StatisticsApi {
         final List<dynamic> data = response.data['records'] ?? [];
         return data.cast<Map<String, dynamic>>();
       }
-      return [];
+      throw Exception('查询低保发放记录失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('查询低保发放记录失败: $e');
     }
   }
 
@@ -314,9 +377,15 @@ class StatisticsApi {
         final List<dynamic> data = response.data['records'] ?? [];
         return data.cast<Map<String, dynamic>>();
       }
-      return [];
+      throw Exception('查询特困发放记录失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('查询特困发放记录失败: $e');
     }
   }
 
@@ -327,9 +396,15 @@ class StatisticsApi {
       if (response.statusCode == 200) {
         return List<String>.from(response.data['periods'] ?? []);
       }
-      return [];
+      throw Exception('获取残疾人护理补贴月份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取残疾人护理补贴月份失败: $e');
     }
   }
 
@@ -350,10 +425,17 @@ class StatisticsApi {
         if (records is List) {
           return records.cast<Map<String, dynamic>>();
         }
+        return [];
       }
-      return [];
+      throw Exception('查询残疾人护理补贴发放记录失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('查询残疾人护理补贴发放记录失败: $e');
     }
   }
 
@@ -364,9 +446,15 @@ class StatisticsApi {
       if (response.statusCode == 200) {
         return List<String>.from(response.data['periods'] ?? []);
       }
-      return [];
+      throw Exception('获取高龄补贴月份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('获取高龄补贴月份失败: $e');
     }
   }
 
@@ -387,11 +475,19 @@ class StatisticsApi {
         if (records is List) {
           return records.cast<Map<String, dynamic>>();
         }
+        return [];
       }
-      return [];
+      throw Exception('查询高龄补贴发放记录失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
     } catch (e) {
-      return [];
+      throw Exception('查询高龄补贴发放记录失败: $e');
     }
   }
 }
+
 

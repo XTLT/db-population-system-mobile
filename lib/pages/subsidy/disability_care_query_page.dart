@@ -5,7 +5,7 @@ class DisabilityCareQueryPage extends StatefulWidget {
   const DisabilityCareQueryPage({super.key});
 
   @override
-  State<DibaoQueryPage> createState() => _DibaoQueryPageState();
+  State<DisabilityCareQueryPage> createState() => _DibaoQueryPageState();
 }
 
 class _DibaoQueryPageState extends State<DisabilityCareQueryPage> {

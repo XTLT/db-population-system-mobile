@@ -20,7 +20,8 @@ class BackupInfo {
     return BackupInfo(
       timestamp: json['timestamp'] ?? '',
       time: json['time'] ?? '',
-      path: json['name'] ?? '',
+      // BUG-14：优先取 path key（与 toJson 对称），回退兼容历史 name key
+      path: json['path'] ?? json['name'] ?? '',
       size: json['size'] ?? 0,
       encrypted: json['encrypted'] ?? false,
       manual: json['manual'] ?? false,

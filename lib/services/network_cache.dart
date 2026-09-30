@@ -163,13 +163,17 @@ class NetworkCache {
   }
   
   
+  // 缓存时长策略（BUG-06 评估：保留现有实现）：
+  //  - 统计类 /statistics：5 分钟（300s）——聚合数随人员/补贴增删频繁变化，需较短过期以尽快反映最新统计；
+  //  - 人员/学生详情 /person/、/student/：30 分钟（1800s）——单条档案相对稳定，离线弱网下可较长复用；
+  //  - 其他可缓存 GET：15 分钟（900s）——折中默认，兼顾新鲜度与离线可用性。
   static int getCacheDuration(String path) {
     if (path.contains('/statistics')) {
       return 5 * 60;
     }
     if (path.contains('/person/') || path.contains('/student/')) {
-      return 30 * 60; 
+      return 30 * 60;
     }
-    return 15 * 60; 
+    return 15 * 60;
   }
 }

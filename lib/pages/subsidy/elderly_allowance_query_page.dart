@@ -5,7 +5,7 @@ class ElderlyAllowanceQueryPage extends StatefulWidget {
   const ElderlyAllowanceQueryPage({super.key});
 
   @override
-  State<DibaoQueryPage> createState() => _DibaoQueryPageState();
+  State<ElderlyAllowanceQueryPage> createState() => _DibaoQueryPageState();
 }
 
 class _DibaoQueryPageState extends State<ElderlyAllowanceQueryPage> {

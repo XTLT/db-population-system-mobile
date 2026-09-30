@@ -456,17 +456,18 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                   },
                   onDismissed: (direction) async {
                     if (member.idCard != null) {
+                      final messenger = ScaffoldMessenger.of(context);
                       try {
                         await PersonApi.deletePerson(member.idCard!);
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             const SnackBar(content: Text('已删除')),
                           );
                           _loadData();
                         }
                       } catch (e) {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          messenger.showSnackBar(
                             SnackBar(content: Text('删除失败: $e')),
                           );
                         }
@@ -506,6 +507,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () async {
+                                final messenger = ScaffoldMessenger.of(context);
                                 final confirmed = await showDialog<bool>(
                                   context: context,
                                   builder: (context) => AlertDialog(
@@ -526,19 +528,19 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                                     ],
                                   ),
                                 );
-                                
+
                                 if (confirmed == true && member.idCard != null) {
                                   try {
                                     await PersonApi.deletePerson(member.idCard!);
                                     if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      messenger.showSnackBar(
                                         const SnackBar(content: Text('已删除')),
                                       );
                                       _loadData();
                                     }
                                   } catch (e) {
                                     if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
+                                      messenger.showSnackBar(
                                         SnackBar(content: Text('删除失败: $e')),
                                       );
                                     }

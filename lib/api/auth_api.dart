@@ -72,7 +72,11 @@ class AuthApi {
   
   static Future<bool> checkToken(String token) async {
     try {
-      final response = await _dio.get('/api/check_token');
+      // 显式把入参 token 放进 Authorization 头，不依赖已登录态拦截器。
+      final response = await _dio.get(
+        '/api/check_token',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
       return response.statusCode == 200 && response.data['valid'] == true;
     } catch (e) {
       return false;
@@ -92,20 +96,28 @@ class AuthApi {
         'new_password': newPassword,
         'password_hashed': false,
       });
-      
-      return {
-        'success': response.data['success'] ?? false,
-        'message': response.data['message'] ?? '修改密码失败',
-      };
+
+      final data = response.data;
+      if (data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? '修改密码失败',
+        };
+      }
+      // HTTP 200 但业务 success==false：失败即抛异常，消息透传服务端 message。
+      throw Exception(data['message'] ?? '修改密码失败');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('修改密码失败: $e');
     } catch (e) {
-      return {
-        'success': false,
-        'message': '修改密码失败: $e',
-      };
+      throw Exception('修改密码失败: $e');
     }
   }
-  
-  
+
+
   static Future<Map<String, dynamic>> forceChangePassword(
     String newPassword,
   ) async {
@@ -113,26 +125,24 @@ class AuthApi {
       final response = await _dio.post('/api/users/me/change-password', data: {
         'password': newPassword,
       });
-      
-      return {
-        'success': response.data['success'] ?? false,
-        'message': response.data['message'] ?? '修改密码失败',
-      };
+
+      final data = response.data;
+      if (data['success'] == true) {
+        return {
+          'success': true,
+          'message': data['message'] ?? '修改密码失败',
+        };
+      }
+      // HTTP 200 但业务 success==false：失败即抛异常，消息透传服务端 message。
+      throw Exception(data['message'] ?? '修改密码失败');
     } on DioException catch (e) {
-      String errorMessage = '修改密码失败';
       final errorData = e.response?.data;
       if (errorData != null && errorData['error'] != null) {
-        errorMessage = errorData['error'];
+        throw Exception(errorData['error']);
       }
-      return {
-        'success': false,
-        'message': errorMessage,
-      };
+      throw Exception('修改密码失败');
     } catch (e) {
-      return {
-        'success': false,
-        'message': '修改密码失败: $e',
-      };
+      throw Exception('修改密码失败: $e');
     }
   }
 }

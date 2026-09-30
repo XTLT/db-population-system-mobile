@@ -381,10 +381,12 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   return;
                 }
 
+                final messenger = ScaffoldMessenger.of(context);
+                final nav = Navigator.of(context);
                 usernameController.dispose();
                 passwordController.dispose();
                 realNameController.dispose();
-                Navigator.of(context).pop();
+                nav.pop();
 
                 final success = await context.read<UserProvider>().createUser(
                       username: username,
@@ -394,7 +396,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     );
 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text(success ? '用户创建成功' : '创建失败'),
                     ),
@@ -477,8 +479,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final nav = Navigator.of(context);
                 realNameController.dispose();
-                Navigator.of(context).pop();
+                nav.pop();
 
                 final success = await context.read<UserProvider>().updateUser(
                       user.id,
@@ -488,7 +492,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     );
 
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                       content: Text(success ? '用户更新成功' : '更新失败'),
                     ),
@@ -538,8 +542,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 return;
               }
 
+              final messenger = ScaffoldMessenger.of(context);
+              final nav = Navigator.of(context);
               passwordController.dispose();
-              Navigator.of(context).pop();
+              nav.pop();
 
               final success = await context.read<UserProvider>().resetPassword(
                     user.id,
@@ -547,7 +553,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   );
 
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(success ? '密码重置成功' : '重置失败'),
                   ),
@@ -575,14 +581,16 @@ class _UserManagementPageState extends State<UserManagementPage> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () async {
-              Navigator.of(context).pop();
+              final messenger = ScaffoldMessenger.of(context);
+              final nav = Navigator.of(context);
+              nav.pop();
 
               final success = await context.read<UserProvider>().deleteUser(
                     user.id,
                   );
 
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(success ? '用户删除成功' : '删除失败'),
                   ),

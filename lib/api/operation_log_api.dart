@@ -26,7 +26,7 @@ class OperationLogApi {
         final List<dynamic> data = response.data;
         return data.map((json) => OperationLog.fromJson(json)).toList();
       } else {
-        throw Exception('获取操作日志失败: \${response.statusCode}');
+        throw Exception('获取操作日志失败: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('获取操作日志失败: $e');
@@ -57,7 +57,7 @@ class OperationLogApi {
       if (response.statusCode == 200) {
         return response.data;
       } else {
-        throw Exception('获取统计失败: \${response.statusCode}');
+        throw Exception('获取统计失败: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('获取统计失败: $e');

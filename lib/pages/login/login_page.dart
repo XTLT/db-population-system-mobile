@@ -175,31 +175,34 @@ class _LoginPageState extends State<LoginPage> {
                 }
                 
                 setState(() => isLoading = true);
-                
+
+                final messenger = ScaffoldMessenger.of(context);
+                final nav = Navigator.of(context);
+                final dialogNav = Navigator.of(dialogContext);
                 try {
                   final authProvider = Provider.of<AuthProvider>(context, listen: false);
                   final result = await authProvider.forceChangePassword(newPassword);
-                  
+
                   if (result['success'] == true) {
                     if (mounted) {
-                      Navigator.of(dialogContext).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
+                      dialogNav.pop();
+                      messenger.showSnackBar(
                         const SnackBar(
                           content: Text('密码修改成功'),
                           backgroundColor: Colors.green,
                         ),
                       );
-                      Navigator.of(context).pushReplacement(
+                      nav.pushReplacement(
                         MaterialPageRoute(builder: (_) => const HomePage()),
                       );
                     }
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(content: Text(result['message'] ?? '修改失败')),
                     );
                   }
                 } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(content: Text('修改密码失败: $e')),
                   );
                 } finally {
@@ -252,6 +255,7 @@ class _LoginPageState extends State<LoginPage> {
       
       final healthResponse = await dio.get('$url/api/health');
       debugPrint('Health 响应: ${healthResponse.data}');
+      if (!mounted) return;
       
       // 使用用户输入的用户名和密码测试登录
       final testUsername = _usernameController.text.trim();
@@ -296,7 +300,8 @@ class _LoginPageState extends State<LoginPage> {
         options: Options(headers: {'Content-Type': 'application/json'}),
       );
       debugPrint('登录响应: ${loginResponse.data}');
-      
+
+      if (!mounted) return;
       Navigator.pop(context);
       
       if (healthResponse.statusCode == 200 && loginResponse.statusCode == 200) {
@@ -341,8 +346,9 @@ class _LoginPageState extends State<LoginPage> {
         );
       }
     } on DioException catch (e) {
+      if (!mounted) return;
       Navigator.pop(context);
-      
+
       debugPrint('连接错误: ${e.type} - ${e.message}');
       debugPrint('错误详情: ${e.error}');
       
@@ -394,6 +400,7 @@ class _LoginPageState extends State<LoginPage> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       Navigator.pop(context);
       debugPrint('未知错误: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -438,7 +445,9 @@ class _LoginPageState extends State<LoginPage> {
           ElevatedButton(
             onPressed: () async {
               String newUrl = urlController.text.trim();
-              
+              final messenger = ScaffoldMessenger.of(context);
+              final nav = Navigator.of(context);
+
               if (newUrl.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -510,13 +519,13 @@ class _LoginPageState extends State<LoginPage> {
                 
                 if (confirmed != true) return;
               }
-              
-              
+
+
               await AppConfig.updateBaseUrl(newUrl);
-              
+
               if (mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                nav.pop();
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text('服务器地址已更新为: $newUrl'),
                     backgroundColor: Colors.green,

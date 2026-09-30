@@ -130,6 +130,8 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                 return;
               }
               
+              final messenger = ScaffoldMessenger.of(context);
+              final nav = Navigator.of(context);
               await SavedFilterService.saveFilter(name, {
                 'name': _nameController.text,
                 'idCard': _idCardController.text,
@@ -143,12 +145,12 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                 'tekunType': _selectedTekunType,
                 'isDead': _selectedIsDead,
               });
-              
-              Navigator.pop(context);
+
+              nav.pop();
               _loadSavedFilters();
-              
+
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   const SnackBar(content: Text('筛选条件已保存')),
                 );
               }
@@ -200,9 +202,10 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                 if (_savedFilters.isNotEmpty)
                   TextButton(
                     onPressed: () async {
+                      final nav = Navigator.of(context);
                       await SavedFilterService.clearFilters();
                       _loadSavedFilters();
-                      Navigator.pop(context);
+                      nav.pop();
                     },
                     child: const Text('清空全部'),
                   ),
@@ -233,9 +236,10 @@ class _AdvancedSearchPageState extends State<AdvancedSearchPage> {
                   trailing: IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: () async {
+                      final nav = Navigator.of(context);
                       await SavedFilterService.deleteFilter(name);
                       _loadSavedFilters();
-                      Navigator.pop(context);
+                      nav.pop();
                     },
                   ),
                   onTap: () {

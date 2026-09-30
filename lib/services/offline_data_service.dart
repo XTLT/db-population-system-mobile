@@ -371,17 +371,18 @@ class OfflineDataService {
   Future<void> saveStudentOffline(Map<String, dynamic> studentData) async {
     final operation = OfflineOperation(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: studentData['id'] == null
+      // BUG-04：Student 模型只有 id_card 字段（无 id），必须用 id_card 判断 create/update
+      type: studentData['id_card'] == null
           ? OperationType.create
           : OperationType.update,
       entityType: 'student',
-      entityId: studentData['id'] ?? '',
+      entityId: studentData['id_card'] ?? '',
       data: studentData,
       createdAt: DateTime.now(),
     );
 
     await queueOperation(operation);
-    await saveData('student_${studentData['id']}', studentData);
+    await saveData('student_${studentData['id_card']}', studentData);
   }
 
   

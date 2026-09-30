@@ -183,6 +183,7 @@ class Person {
       'remark': remark,
       'poor_type': poorType,
       'disability': disability,
+      'disability_type': disabilityType,
       'dis_level': disLevel,
       'dibao': dibao,
       'jisheng': jisheng,
@@ -204,6 +205,7 @@ class Person {
       'commercial_forest_area': commercialForestArea,
       'commercial_forest_change_reason': commercialForestChangeReason,
       'commercial_forest_change_time': commercialForestChangeTime,
+      'education': education?.toJson(),
     };
   }
 

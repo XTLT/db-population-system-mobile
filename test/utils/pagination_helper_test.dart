@@ -175,5 +175,100 @@ void main() {
       // 返回数据少于页大小，应该标记为没有更多数据
       expect(limitedHelper.hasMore, false);
     });
+
+    // ===== 以下为本次新增 =====
+
+    test('reset 应清空 items/error 并复位 currentPage/hasMore', () async {
+      await helper.load((callback) => callback());
+      await helper.load((callback) => callback());
+      expect(helper.items.length, 20);
+      expect(helper.currentPage, 2);
+
+      helper.reset();
+      expect(helper.items, isEmpty);
+      expect(helper.currentPage, 0);
+      expect(helper.hasMore, true);
+      expect(helper.errorMessage, isNull);
+      expect(helper.isLoading, false);
+    });
+
+    test('hasMore=false 时再次 load 应被直接短路（不再请求）', () async {
+      var fetchCalls = 0;
+      final h = PaginationHelper<int>(
+        fetchData: (page, pageSize) async {
+          fetchCalls++;
+          return []; // 空列表 -> 立即 hasMore=false
+        },
+        pageSize: 10,
+      );
+
+      await h.load((callback) => callback());
+      expect(h.hasMore, false);
+      expect(fetchCalls, 1);
+
+      // 再来一次：hasMore 已为 false，应直接 return，fetchData 不再被调用
+      await h.load((callback) => callback());
+      expect(fetchCalls, 1);
+    });
+
+    test('fetchData 应收到正确的 (page, pageSize) 入参', () async {
+      final seen = <List<int>>[];
+      final h = PaginationHelper<int>(
+        fetchData: (page, pageSize) async {
+          seen.add([page, pageSize]);
+          // 第一页返回整页，第二页返回空，便于停止
+          return page == 0 ? List.generate(pageSize, (i) => i) : [];
+        },
+        pageSize: 7,
+      );
+
+      await h.load((callback) => callback());
+      expect(seen.first, [0, 7]);
+
+      await h.load((callback) => callback());
+      expect(seen.last, [1, 7]);
+    });
+
+    test('恰好返回 pageSize 条时 hasMore 仍为 true（需再探一页）', () async {
+      var calls = 0;
+      final h = PaginationHelper<int>(
+        fetchData: (page, pageSize) async {
+          calls++;
+          // 第一页整页，第二页空
+          return page == 0 ? List.generate(10, (i) => i) : [];
+        },
+        pageSize: 10,
+      );
+
+      await h.load((callback) => callback());
+      // 刚好 10 条 == pageSize，不触发 hasMore=false，currentPage 自增到 1
+      expect(h.hasMore, true);
+      expect(h.currentPage, 1);
+      expect(h.items.length, 10);
+
+      // 再加载一页（空）-> 这一页返回 0 < 10 -> hasMore=false
+      await h.load((callback) => callback());
+      expect(h.hasMore, false);
+      expect(calls, 2);
+    });
+
+    test('errorMessage 在成功 load 后应被清空', () async {
+      var fail = true;
+      final h = PaginationHelper<int>(
+        fetchData: (page, pageSize) async {
+          if (fail) throw Exception('boom');
+          return [1, 2];
+        },
+      );
+
+      await h.load((callback) => callback());
+      expect(h.errorMessage, isNotNull);
+
+      fail = false;
+      await h.load((callback) => callback());
+      // 注意：load 在 error 后 currentPage 未自增，重试仍从当前页开始，成功后清空 error
+      expect(h.errorMessage, isNull);
+      expect(h.isLoading, false);
+    });
   });
 }

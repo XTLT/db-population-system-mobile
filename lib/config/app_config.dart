@@ -120,11 +120,14 @@ class AppConfig {
   }
   
   
+  // 6a 结论：getApiUrl 经全仓 Grep 确认零调用方（各 api 层直接用 dio 路径 '/api/...'）。
+  // 后端蓝图实际挂载在 url_prefix='/api'（见 server/app_modular.py），并无 /api/v1 路由。
+  // 此处保留该工具方法但把前缀由错误的 /api/v1 修正为 /api，避免日后被误用成 404。
   static String getApiUrl(String path) {
-    final base = apiBaseUrl.endsWith('/') 
-        ? apiBaseUrl.substring(0, apiBaseUrl.length - 1) 
+    final base = apiBaseUrl.endsWith('/')
+        ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
         : apiBaseUrl;
-    return '$base/api/v1$path';
+    return '$base/api$path';
   }
 
   static String normalizeUrl(String url) {

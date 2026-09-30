@@ -206,5 +206,104 @@ void main() {
         expect(Validators.calculateAge(birthday), 24);
       });
     });
+
+    // ===== 以下为本次新增：补齐全部 13 个 static 校验函数 + 边界值 =====
+
+    group('validateIdCard 补充边界', () {
+      test('18 位校验码为小写 x 时应通过（源码会 toUpperCase）', () {
+        expect(Validators.validateIdCard('11010519491231002x'), null);
+      });
+
+      test('18 位前 17 位含字母应报格式不正确', () {
+        // 前 17 位里混入字母（长度仍为 18）
+        expect(Validators.validateIdCard('1101051949123100AX'), '身份证号格式不正确');
+      });
+    });
+
+    group('validateName 边界值', () {
+      test('正好 2 / 20 个字符应通过', () {
+        expect(Validators.validateName('张三'), null); // 2
+        expect(Validators.validateName('一二三四五六七八九十一二三四五六七八二十'), null); // 20
+      });
+    });
+
+    group('validateAddress 边界值', () {
+      test('正好 200 字符应通过', () {
+        expect(Validators.validateAddress('A' * 200), null);
+      });
+    });
+
+    group('validateRemark', () {
+      test('空或 <=500 字符返回 null', () {
+        expect(Validators.validateRemark(null), null);
+        expect(Validators.validateRemark(''), null);
+        expect(Validators.validateRemark('普通备注'), null);
+        expect(Validators.validateRemark('B' * 500), null);
+      });
+
+      test('超过 500 字符报错', () {
+        expect(Validators.validateRemark('B' * 501), '备注长度不能超过500个字符');
+      });
+    });
+
+    group('validateLandArea 边界值', () {
+      test('0 与 99999 边界应通过', () {
+        expect(Validators.validateLandArea('0'), null);
+        expect(Validators.validateLandArea('99999'), null);
+      });
+    });
+
+    // 三个公益林/商品林面积校验：结构相同，仅错误文案不同，表驱动覆盖
+    group('validateLocalWelfareForestArea', () {
+      test('空/合法/非法/负数/超界（表驱动）', () {
+        expect(Validators.validateLocalWelfareForestArea(null), null);
+        expect(Validators.validateLocalWelfareForestArea(''), null);
+        expect(Validators.validateLocalWelfareForestArea('12.5'), null);
+        expect(Validators.validateLocalWelfareForestArea('0'), null);
+        expect(Validators.validateLocalWelfareForestArea('99999'), null);
+        expect(Validators.validateLocalWelfareForestArea('abc'), '地方公益林面积必须是数字');
+        expect(Validators.validateLocalWelfareForestArea('-1'), '地方公益林面积不能为负数');
+        expect(Validators.validateLocalWelfareForestArea('100000'), '地方公益林面积数值过大');
+      });
+    });
+
+    group('validateNationalWelfareForestArea', () {
+      test('空/合法/非法/负数/超界（表驱动）', () {
+        expect(Validators.validateNationalWelfareForestArea(null), null);
+        expect(Validators.validateNationalWelfareForestArea(''), null);
+        expect(Validators.validateNationalWelfareForestArea('8.8'), null);
+        expect(Validators.validateNationalWelfareForestArea('abc'), '国家公益林面积必须是数字');
+        expect(Validators.validateNationalWelfareForestArea('-1'), '国家公益林面积不能为负数');
+        expect(Validators.validateNationalWelfareForestArea('100000'), '国家公益林面积数值过大');
+      });
+    });
+
+    group('validateCommercialForestArea', () {
+      test('空/合法/非法/负数/超界（表驱动）', () {
+        expect(Validators.validateCommercialForestArea(null), null);
+        expect(Validators.validateCommercialForestArea(''), null);
+        expect(Validators.validateCommercialForestArea('6.6'), null);
+        expect(Validators.validateCommercialForestArea('abc'), '非国有天然商品林面积必须是数字');
+        expect(Validators.validateCommercialForestArea('-1'), '非国有天然商品林面积不能为负数');
+        expect(Validators.validateCommercialForestArea('100000'), '非国有天然商品林面积数值过大');
+      });
+    });
+
+    group('extractBirthday / extractGender 补充', () {
+      test('非法长度（如 16 位）应返回 null', () {
+        expect(Validators.extractBirthday('1234567890123456'), isNull);
+        expect(Validators.extractGender('1234567890123456'), isNull);
+      });
+
+      test('生日段含非数字应走 catch 返回 null', () {
+        // 长度 18，但生日段（6..14）含字母，int.parse 失败 -> catch -> null
+        expect(Validators.extractBirthday('11010519AB1231001X'), isNull);
+      });
+
+      test('性别位含非数字应走 catch 返回 null', () {
+        // 长度 18，但第 16 位（性别位）非数字
+        expect(Validators.extractGender('1101051990010100X5'), isNull);
+      });
+    });
   });
 }

@@ -47,7 +47,9 @@ class UserApi {
   }
 
   
-  static Future<UserInfo> updateUser(
+  // 服务端 PUT /api/users/<id> 成功时仅返回 {'success': true}，不回传 user 对象，
+  // 因此这里按真实契约返回成功标志，而非把响应体误当 user 解析。
+  static Future<bool> updateUser(
     String userId, {
     String? realName,
     String? role,
@@ -62,7 +64,7 @@ class UserApi {
       final response = await _dio.put('/api/users/$userId', data: data);
 
       if (response.statusCode == 200) {
-        return UserInfo.fromJson(response.data);
+        return response.data['success'] == true;
       } else {
         throw Exception('更新用户失败: ${response.statusCode}');
       }

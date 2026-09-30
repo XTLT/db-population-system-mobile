@@ -173,11 +173,14 @@ class SyncService {
 
   
   
+  // 6b：桩实现（stub），恒返回 false。
+  // 结论：基于现有数据字段无法做真实的三方冲突检测——Person/OfflineOperation 均未携带
+  //   ① 离线编辑所基于的基线快照(base)，或 ② Person 上的 updated_at/version 向量时钟字段；
+  //   op.data 存的是本地“新值”而非旧值，因此无法判断“服务器记录是否在离线期间被他人改过”。
+  //   要实现真实冲突检测需先扩展 schema（保存 base 快照或加版本字段），不在本次最小改动范围内。
+  // TODO(stub): 待 Person 增加 updated_at/version 或 OfflineOperation.data 记录基线后，
+  //   改为比较 serverPerson 与 op.data 的基线差异，命中则返回 true 触发 saveConflict。
   bool _hasConflict(OfflineOperation op, Person serverPerson) {
-    
-    
-    
-    
     return false;
   }
 
