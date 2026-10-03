@@ -157,6 +157,52 @@ class StatisticsApi {
     }
   }
 
+  /// 获取地力补贴年份列表
+  static Future<List<String>> getLandSubsidyYears() async {
+    try {
+      final response = await _dio.get('/api/land_subsidy/years');
+      if (response.statusCode == 200) {
+        return List<String>.from(response.data['years'] ?? []);
+      }
+      throw Exception('获取地力补贴年份失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
+    } catch (e) {
+      throw Exception('获取地力补贴年份失败: $e');
+    }
+  }
+
+  /// 查询地力补贴明细（按年度+姓名/身份证号）
+  static Future<List<Map<String, dynamic>>> queryLandSubsidies({
+    String? year,
+    String? search,
+  }) async {
+    try {
+      final queryParams = <String, dynamic>{};
+      if (year != null && year.isNotEmpty && year != '全部') queryParams['year'] = year;
+      if (search != null && search.isNotEmpty) queryParams['search'] = search;
+
+      final response = await _dio.get('/api/land_subsidy', queryParameters: queryParams);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['subsidies'] ?? [];
+        return data.cast<Map<String, dynamic>>();
+      }
+      throw Exception('查询地力补贴明细失败: ${response.statusCode}');
+    } on DioException catch (e) {
+      final errorData = e.response?.data;
+      if (errorData != null && errorData['error'] != null) {
+        throw Exception(errorData['error']);
+      }
+      throw Exception('网络错误，请检查网络连接');
+    } catch (e) {
+      throw Exception('查询地力补贴明细失败: $e');
+    }
+  }
+
   /// 获取待遇发放年份列表
   static Future<List<String>> getTreatmentPaymentYears() async {
     try {

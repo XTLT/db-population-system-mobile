@@ -12,6 +12,7 @@ import '../subsidy/dibao_query_page.dart';
 import '../subsidy/tekun_query_page.dart';
 import '../subsidy/disability_care_query_page.dart';
 import '../subsidy/elderly_allowance_query_page.dart';
+import '../subsidy/land_subsidy_query_page.dart';
 
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
@@ -1053,6 +1054,20 @@ class _SubsidyStatsTab extends StatelessWidget {
               children: [
                 _buildStatItem('人均补贴(元)', avgSubsidyAmount.toString(), Colors.orange),
               ],
+            ),
+            const Divider(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LandSubsidyQueryPage()),
+                  );
+                },
+                icon: const Icon(Icons.list_alt, size: 18),
+                label: const Text('查看补贴明细'),
+              ),
             ),
           ],
         ),
