@@ -171,24 +171,7 @@ void main() {
   // ------------------------------------------------------------------
   // 9-10. 年份列表（List<String>，错误抛 Exception —— 已与全文件错误策略统一）
   // ------------------------------------------------------------------
-  group('getTreatmentPaymentYears / getPensionInsuranceYears', () {
-    test('getTreatmentPaymentYears: GET /api/treatment_payment/years，解析 data.years', () async {
-      final rec = installMockAdapter((o) => jsonResponse({'years': ['2022', '2023', '2024']}));
-      final list = await StatisticsApi.getTreatmentPaymentYears();
-      expect(rec.last()!.path, '/api/treatment_payment/years');
-      expect(list, ['2022', '2023', '2024']);
-    });
-
-    test('getTreatmentPaymentYears: years 缺省返回空 List<String>', () async {
-      installMockAdapter((o) => jsonResponse({}));
-      expect(await StatisticsApi.getTreatmentPaymentYears(), isEmpty);
-    });
-
-    test('getTreatmentPaymentYears: 非 200 抛 Exception（单层干净消息，不再双重包装）', () async {
-      installMockAdapter((o) => jsonResponse({}, statusCode: 500));
-      expect(() => StatisticsApi.getTreatmentPaymentYears(), throwsA(isA<Exception>()));
-    });
-
+  group('getPensionInsuranceYears', () {
     test('getPensionInsuranceYears: GET /api/pension_insurance/years，解析 data.years', () async {
       final rec = installMockAdapter((o) => jsonResponse({'years': ['2024']}));
       final list = await StatisticsApi.getPensionInsuranceYears();
@@ -203,21 +186,9 @@ void main() {
   });
 
   // ------------------------------------------------------------------
-  // 11-12. 待遇/养老 periods（List<String>，错误抛 Exception）
+  // 11-12. 养老 periods（List<String>，错误抛 Exception）
   // ------------------------------------------------------------------
-  group('getTreatmentPaymentPeriods / getPensionInsurancePeriods', () {
-    test('getTreatmentPaymentPeriods: GET .../periods，解析 data.periods', () async {
-      final rec = installMockAdapter((o) => jsonResponse({'periods': ['2024-01', '2024-02']}));
-      final list = await StatisticsApi.getTreatmentPaymentPeriods();
-      expect(rec.last()!.path, '/api/treatment_payment/periods');
-      expect(list, ['2024-01', '2024-02']);
-    });
-
-    test('getTreatmentPaymentPeriods: 非 200 抛 Exception', () async {
-      installMockAdapter((o) => jsonResponse({}, statusCode: 500));
-      expect(() => StatisticsApi.getTreatmentPaymentPeriods(), throwsA(isA<Exception>()));
-    });
-
+  group('getPensionInsurancePeriods', () {
     test('getPensionInsurancePeriods: GET .../periods，解析 data.periods', () async {
       final rec = installMockAdapter((o) => jsonResponse({'periods': ['2024-03']}));
       final list = await StatisticsApi.getPensionInsurancePeriods();
@@ -232,40 +203,9 @@ void main() {
   });
 
   // ------------------------------------------------------------------
-  // 13-14. 待遇/养老查询（List<Map>，period=全部 时不带 period）
+  // 13-14. 养老查询（List<Map>，period=全部 时不带 period）
   // ------------------------------------------------------------------
-  group('queryTreatmentPayments / queryPensionInsurance', () {
-    test('queryTreatmentPayments: GET /api/treatment_payment，拼装 period/id_card/name，解析 data.payments', () async {
-      final rec = installMockAdapter((o) => jsonResponse({
-            'payments': [{'id_card': '110', 'amount': 120.5}],
-          }));
-      final list = await StatisticsApi.queryTreatmentPayments(
-        period: '2024-01',
-        idCard: '110',
-        name: '张三',
-      );
-      final q = rec.last()!.queryParameters;
-      expect(rec.last()!.path, '/api/treatment_payment');
-      expect(q['period'], '2024-01');
-      expect(q['id_card'], '110');
-      expect(q['name'], '张三');
-      expect(list.length, 1);
-      expect(list[0]['amount'], 120.5);
-    });
-
-    test('queryTreatmentPayments: period=「全部」时不发送 period 字段', () async {
-      final rec = installMockAdapter((o) => jsonResponse({'payments': []}));
-      await StatisticsApi.queryTreatmentPayments(period: '全部', name: '张三');
-      final q = rec.last()!.queryParameters;
-      expect(q.containsKey('period'), false);
-      expect(q['name'], '张三');
-    });
-
-    test('queryTreatmentPayments: 非 200 抛 Exception', () async {
-      installMockAdapter((o) => jsonResponse({}, statusCode: 500));
-      expect(() => StatisticsApi.queryTreatmentPayments(), throwsA(isA<Exception>()));
-    });
-
+  group('queryPensionInsurance', () {
     test('queryPensionInsurance: GET /api/pension_insurance，解析 data.records', () async {
       final rec = installMockAdapter((o) => jsonResponse({
             'records': [{'id_card': 'X', 'months': 12}],

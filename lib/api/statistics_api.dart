@@ -203,26 +203,6 @@ class StatisticsApi {
     }
   }
 
-  /// 获取待遇发放年份列表
-  static Future<List<String>> getTreatmentPaymentYears() async {
-    try {
-      final response = await _dio.get('/api/treatment_payment/years');
-
-      if (response.statusCode == 200) {
-        return List<String>.from(response.data['years'] ?? []);
-      }
-      throw Exception('获取待遇发放年份数据失败: ${response.statusCode}');
-    } on DioException catch (e) {
-      final errorData = e.response?.data;
-      if (errorData != null && errorData['error'] != null) {
-        throw Exception(errorData['error']);
-      }
-      throw Exception('网络错误，请检查网络连接');
-    } catch (e) {
-      throw Exception('获取待遇发放年份数据失败: $e');
-    }
-  }
-
   /// 获取养老保险年份列表
   static Future<List<String>> getPensionInsuranceYears() async {
     try {
@@ -243,25 +223,6 @@ class StatisticsApi {
     }
   }
 
-  /// 获取待遇发放可用月份列表
-  static Future<List<String>> getTreatmentPaymentPeriods() async {
-    try {
-      final response = await _dio.get('/api/treatment_payment/periods');
-      if (response.statusCode == 200) {
-        return List<String>.from(response.data['periods'] ?? []);
-      }
-      throw Exception('获取待遇发放月份失败: ${response.statusCode}');
-    } on DioException catch (e) {
-      final errorData = e.response?.data;
-      if (errorData != null && errorData['error'] != null) {
-        throw Exception(errorData['error']);
-      }
-      throw Exception('网络错误，请检查网络连接');
-    } catch (e) {
-      throw Exception('获取待遇发放月份失败: $e');
-    }
-  }
-
   /// 获取养老保险可用月份列表
   static Future<List<String>> getPensionInsurancePeriods() async {
     try {
@@ -278,35 +239,6 @@ class StatisticsApi {
       throw Exception('网络错误，请检查网络连接');
     } catch (e) {
       throw Exception('获取养老保险月份失败: $e');
-    }
-  }
-
-  /// 查询待遇发放记录（按月份+身份证号/姓名）
-  static Future<List<Map<String, dynamic>>> queryTreatmentPayments({
-    String? period,
-    String? idCard,
-    String? name,
-  }) async {
-    try {
-      final queryParams = <String, dynamic>{};
-      if (period != null && period.isNotEmpty && period != '全部') queryParams['period'] = period;
-      if (idCard != null && idCard.isNotEmpty) queryParams['id_card'] = idCard;
-      if (name != null && name.isNotEmpty) queryParams['name'] = name;
-
-      final response = await _dio.get('/api/treatment_payment', queryParameters: queryParams);
-      if (response.statusCode == 200) {
-        final List<dynamic> data = response.data['payments'] ?? [];
-        return data.cast<Map<String, dynamic>>();
-      }
-      throw Exception('查询待遇发放记录失败: ${response.statusCode}');
-    } on DioException catch (e) {
-      final errorData = e.response?.data;
-      if (errorData != null && errorData['error'] != null) {
-        throw Exception(errorData['error']);
-      }
-      throw Exception('网络错误，请检查网络连接');
-    } catch (e) {
-      throw Exception('查询待遇发放记录失败: $e');
     }
   }
 
