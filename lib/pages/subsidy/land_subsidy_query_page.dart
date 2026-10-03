@@ -104,7 +104,7 @@ class _LandSubsidyQueryPageState extends State<LandSubsidyQueryPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: _selectedYear,
+              initialValue: _selectedYear,
               menuMaxHeight: 300,
               decoration: const InputDecoration(
                 labelText: '补贴年度',

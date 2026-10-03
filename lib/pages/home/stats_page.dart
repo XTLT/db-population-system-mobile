@@ -897,7 +897,7 @@ class _SubsidyStatsTab extends StatelessWidget {
           _buildSection('打款查询', _buildPaymentQueryEntry(context)),
           const SizedBox(height: 24),
 
-          _buildSection('地力补贴统计', _buildLandSubsidyStats()),
+          _buildSection('地力补贴统计', _buildLandSubsidyStats(context)),
           const SizedBox(height: 24),
 
           _buildSection('土地面积统计', _buildLandAreaStats()),
@@ -1017,7 +1017,7 @@ class _SubsidyStatsTab extends StatelessWidget {
     );
   }
 
-  Widget _buildLandSubsidyStats() {
+  Widget _buildLandSubsidyStats(BuildContext context) {
     if (landSubsidyStats == null) {
       return const Center(child: Text('暂无数据'));
     }
