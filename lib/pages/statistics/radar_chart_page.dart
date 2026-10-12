@@ -12,6 +12,7 @@ class RadarChartPage extends StatefulWidget {
 class _RadarChartPageState extends State<RadarChartPage> {
   Map<String, dynamic>? _comparisonData;
   bool _isLoading = true;
+  String? _loadError;
   final List<String> _selectedDimensions = ['age', 'disability', 'dibao', 'migration', 'student'];
 
   final Map<String, String> _dimensionLabels = {
@@ -31,22 +32,55 @@ class _RadarChartPageState extends State<RadarChartPage> {
     _loadData();
   }
 
+  // ---- 健壮解析：容忍 int/double/String/null 混入，杜绝 build 期 TypeError ----
+  double _toDouble(dynamic v, [double fallback = 0.0]) {
+    if (v is num) {
+      final d = v.toDouble();
+      return d.isNaN || d.isInfinite ? fallback : d;
+    }
+    if (v is String) {
+      return double.tryParse(v.trim()) ?? fallback;
+    }
+    return fallback;
+  }
+
+  List<String> _toStringList(dynamic v) {
+    if (v is List) {
+      return v
+          .map((e) => e?.toString() ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    return [];
+  }
+
+  List<double> _toDoubleList(dynamic v) {
+    if (v is List) {
+      return v.map((e) => _toDouble(e)).toList();
+    }
+    return [];
+  }
+
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _loadError = null;
+    });
 
     try {
       final data = await StatisticsApi.getComparison(dimensions: _selectedDimensions);
+      if (!mounted) return;
       setState(() {
         _comparisonData = data;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('加载失败: $e')),
-        );
-      }
+      if (!mounted) return;
+      setState(() {
+        _comparisonData = null;
+        _isLoading = false;
+        _loadError = e.toString();
+      });
     }
   }
 
@@ -143,90 +177,164 @@ class _RadarChartPageState extends State<RadarChartPage> {
     );
   }
 
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.red, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              '加载失败',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _loadError ?? '未知错误',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadData,
+              child: const Text('重试'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContent() {
-    if (_comparisonData == null || _selectedDimensions.isEmpty) {
-      return const Center(child: Text('请选择至少一个维度'));
+    if (_loadError != null) {
+      return _buildErrorView();
     }
-
-    final dimensions = List<String>.from(_comparisonData!['dimensions'] ?? []);
-    final values = List<double>.from(_comparisonData!['raw_values'] ?? []);
-    final normalizedValues = List<double>.from(_comparisonData!['values'] ?? []);
-    final total = _comparisonData!['total'] ?? 0;
-
-    if (dimensions.isEmpty) {
+    if (_comparisonData == null) {
       return const Center(child: Text('暂无数据'));
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Text(
-                    '数据概览',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '总人口: $total 人',
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
+    // 整段解析包在 try 中：即使服务端返回结构异常，也转为可见错误而非灰屏
+    try {
+      final dimensions = _toStringList(_comparisonData!['dimensions']);
+      final rawValues = _toDoubleList(_comparisonData!['raw_values']);
+      final normalizedValues = _toDoubleList(_comparisonData!['values'])
+          .map((v) => v.clamp(0.0, 100.0).toDouble())
+          .toList();
+      final total = _toDouble(_comparisonData!['total']).toInt();
+
+      if (dimensions.isEmpty) {
+        return const Center(child: Text('暂无数据'));
+      }
+
+      // 对齐三个列表长度，防止下标越界；取三者最小长度
+      final lenList = [
+        dimensions.length,
+        rawValues.length,
+        normalizedValues.length,
+      ];
+      final n = lenList.reduce((a, b) => a < b ? a : b);
+      if (n == 0) {
+        return const Center(child: Text('暂无数据'));
+      }
+      final dims = dimensions.sublist(0, n);
+      final raws = rawValues.sublist(0, n);
+      final norms = normalizedValues.sublist(0, n);
+
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      '数据概览',
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 300,
-                    child: RadarChart(
-                      RadarChartData(
-                        radarShape: RadarShape.polygon,
-                        tickCount: 5,
-                        ticksTextStyle: const TextStyle(fontSize: 10),
-                        radarBorderData: const BorderSide(color: Colors.grey, width: 1),
-                        gridBorderData: const BorderSide(color: Colors.grey, width: 1),
-                        titlePositionPercentageOffset: 0.2,
-                        getTitle: (index, angle) {
-                          if (index < 0 || index >= dimensions.length) {
-                            return const RadarChartTitle(text: '');
-                          }
-                          return RadarChartTitle(
-                            text: dimensions[index],
-                            angle: angle,
-                            positionPercentageOffset: 0.2,
-                          );
-                        },
-                        dataSets: [
-                          RadarDataSet(
-                            fillColor: Colors.blue.withOpacity(0.3),
-                            borderColor: Colors.blue,
-                            borderWidth: 2,
-                            entryRadius: 4,
-                            dataEntries: List.generate(
-                              normalizedValues.length,
-                              (i) => RadarEntry(value: normalizedValues[i]),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 8),
+                    Text(
+                      '总人口: $total 人',
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 300,
+                      child: RadarChart(
+                        RadarChartData(
+                          radarShape: RadarShape.polygon,
+                          tickCount: 5,
+                          ticksTextStyle: const TextStyle(fontSize: 10),
+                          radarBorderData:
+                              const BorderSide(color: Colors.grey, width: 1),
+                          gridBorderData:
+                              const BorderSide(color: Colors.grey, width: 1),
+                          titlePositionPercentageOffset: 0.2,
+                          getTitle: (index, angle) {
+                            if (index < 0 || index >= dims.length) {
+                              return const RadarChartTitle(text: '');
+                            }
+                            return RadarChartTitle(
+                              text: dims[index],
+                              angle: angle,
+                              positionPercentageOffset: 0.2,
+                            );
+                          },
+                          dataSets: [
+                            RadarDataSet(
+                              fillColor: Colors.blue.withOpacity(0.3),
+                              borderColor: Colors.blue,
+                              borderWidth: 2,
+                              entryRadius: 4,
+                              dataEntries: List.generate(
+                                norms.length,
+                                (i) => RadarEntry(value: norms[i]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
+            const SizedBox(height: 24),
+            _buildDetailList(dims, raws, norms),
+          ],
+        ),
+      );
+    } catch (e) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.broken_image_outlined,
+                  color: Colors.orange, size: 48),
+              const SizedBox(height: 16),
+              Text('数据格式异常', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                '$e',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: _loadData, child: const Text('重试')),
+            ],
           ),
-          const SizedBox(height: 24),
-
-          
-          _buildDetailList(dimensions, values, normalizedValues),
-        ],
-      ),
-    );
+        ),
+      );
+    }
   }
 
   Widget _buildDetailList(
@@ -281,7 +389,7 @@ class _RadarChartPageState extends State<RadarChartPage> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
-                        value: normalized / 100,
+                        value: (normalized / 100).clamp(0.0, 1.0).toDouble(),
                         backgroundColor: Colors.grey.shade200,
                         valueColor: AlwaysStoppedAnimation<Color>(
                           _getColorForValue(normalized),

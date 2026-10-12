@@ -14,7 +14,7 @@ class AppConfig {
   
   
   
-  static String apiBaseUrl = 'https://your-domain.com:5000';
+  static String apiBaseUrl = 'https://tension02.ren:5000';
   
   
   static List<String> backupUrls = [];
@@ -116,7 +116,7 @@ class AppConfig {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('api_base_url');
     
-    apiBaseUrl = 'https://your-domain.com';
+    apiBaseUrl = 'https://tension02.ren:5000';
   }
   
   

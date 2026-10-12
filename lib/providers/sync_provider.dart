@@ -77,6 +77,11 @@ class SyncProvider with ChangeNotifier {
       _state = result.isSuccess ? SyncState.success : SyncState.error;
       _lastSyncTime = DateTime.now().toIso8601String();
 
+      // 持久化最后同步时间，供设置页"数据同步 / 最后同步时间"展示。
+      // （此前只写内存，OfflineDataService.getLastSyncTime() 永远读不到，
+      //  导致手动/自动同步后设置页时间不更新，看起来像"数据同步没生效"。）
+      await OfflineDataService().updateLastSyncTime();
+
       if (!result.isSuccess) {
         _errorMessage = '同步失败: ${result.summary}';
       }
@@ -85,6 +90,8 @@ class SyncProvider with ChangeNotifier {
     } catch (e) {
       _state = SyncState.error;
       _errorMessage = '同步失败: $e';
+      // 即使整轮同步抛异常，也记录本次同步尝试时间，避免用户误以为从未同步。
+      await OfflineDataService().updateLastSyncTime();
       notifyListeners();
     }
   }

@@ -218,6 +218,70 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
     }
   }
 
+  /// 执行耗时的备份操作（服务器端需复制数据库 + gzip 压缩全部照片 + 加密，3412 人数据可能耗时数秒到数十秒）。
+  ///
+  /// 修复要点：
+  /// 1. 点击「确定」后立即弹出**模态进度对话框**（可见进度 + barrierDismissible:false 阻断页面跳转），
+  ///    不再是“点击后干等、完成才弹提示”。
+  /// 2. 进度框绑定本页面路由：一旦用户离开本页面（页面被销毁），后续结果 SnackBar 直接不再弹出，
+  ///    避免根级 ScaffoldMessenger 在别的界面残留提示。
+  Future<void> _runBackupTask({
+    required String workingText,
+    required Future<bool> Function() task,
+    required String successText,
+    required String failureText,
+    String? Function()? failureDetail,
+    Duration successDuration = const Duration(seconds: 4),
+  }) async {
+    // 立即弹出模态进度框，给出可见反馈并阻断用户在等待期间跳转走
+    bool progressShowing = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        content: SizedBox(
+          width: 260,
+          child: Row(
+            children: [
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2.5),
+              ),
+              const SizedBox(width: 20),
+              Expanded(child: Text(workingText)),
+            ],
+          ),
+        ),
+      ),
+    ).then((_) => progressShowing = false);
+
+    // 执行网络/服务器耗时操作
+    var success = false;
+    try {
+      success = await task();
+    } catch (_) {
+      success = false;
+    }
+
+    // 页面已被销毁（用户已离开备份管理）：不关闭、不弹任何残留提示
+    if (!mounted) return;
+
+    if (progressShowing) {
+      Navigator.of(context).pop(); // 关闭进度框
+    }
+
+    // 仅在本页面仍可见时弹出结果提示
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            success ? successText : (failureDetail?.call() ?? failureText)),
+        backgroundColor: success ? Colors.green : Colors.red,
+        duration: success ? successDuration : const Duration(seconds: 4),
+      ),
+    );
+  }
+
   void _showCreateBackupDialog() {
     showDialog(
       context: context,
@@ -231,32 +295,14 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final backupProvider = context.read<BackupProvider>();
               Navigator.pop(context);
-
-              final scaffoldMessenger = ScaffoldMessenger.of(context);
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(content: Text('正在创建备份...')),
+              await _runBackupTask(
+                workingText: '正在创建备份，请稍候...',
+                task: () => backupProvider.createBackup(),
+                successText: '备份创建成功',
+                failureText: '备份创建失败',
               );
-
-              final success = await context.read<BackupProvider>().createBackup();
-
-              if (mounted) {
-                if (success) {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('备份创建成功'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('备份创建失败'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
             },
             child: const Text('确定'),
           ),
@@ -308,38 +354,19 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
           ),
           ElevatedButton(
             onPressed: () async {
+              final backupProvider = context.read<BackupProvider>();
+              final password =
+                  backup.encrypted ? passwordController.text : null;
               Navigator.pop(context);
-
-              final scaffoldMessenger = ScaffoldMessenger.of(context);
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(content: Text('正在恢复备份...')),
-              );
-
-              final success = await context.read<BackupProvider>().restoreBackup(
-                    backup.path,
-                    password: backup.encrypted ? passwordController.text : null,
-                  );
-
               passwordController.dispose();
-
-              if (mounted) {
-                if (success) {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('备份恢复成功，请重新登录'),
-                      backgroundColor: Colors.green,
-                      duration: Duration(seconds: 5),
-                    ),
-                  );
-                } else {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('备份恢复失败'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
+              await _runBackupTask(
+                workingText: '正在恢复备份，请稍候...',
+                task: () =>
+                    backupProvider.restoreBackup(backup.path, password: password),
+                successText: '备份恢复成功，请重新登录',
+                failureText: '备份恢复失败',
+                successDuration: const Duration(seconds: 5),
+              );
             },
             child: const Text('确定恢复'),
           ),
@@ -378,32 +405,16 @@ class _BackupManagementPageState extends State<BackupManagementPage> {
               foregroundColor: Colors.white,
             ),
             onPressed: () async {
+              final backupProvider = context.read<BackupProvider>();
               Navigator.pop(context);
-
-              final scaffoldMessenger = ScaffoldMessenger.of(context);
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(content: Text('正在删除备份...')),
+              await _runBackupTask(
+                workingText: '正在删除备份，请稍候...',
+                task: () => backupProvider.deleteBackup(backup.path),
+                successText: '备份已删除',
+                failureText: '删除失败',
+                failureDetail: () =>
+                    backupProvider.errorMessage ?? '删除失败',
               );
-
-              final success = await context.read<BackupProvider>().deleteBackup(backup.path);
-
-              if (mounted) {
-                if (success) {
-                  scaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('备份已删除'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } else {
-                  scaffoldMessenger.showSnackBar(
-                    SnackBar(
-                      content: Text(context.read<BackupProvider>().errorMessage ?? '删除失败'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
             },
             child: const Text('确定删除'),
           ),

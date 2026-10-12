@@ -1,14 +1,32 @@
-
 import 'package:dio/dio.dart';
 import '../models/user.dart';
 import 'api_client.dart';
 
+/// checkToken 校验结果。
+///
+/// 切后台回来 / 冷启动时本地存有 token，需要向服务器确认是否仍有效。
+/// 关键：必须区分「服务器明确判定 token 无效」与「网络/服务层异常」——
+/// 后者不能据此登出，否则瞬时网络抖动会把用户踢回登录页。
+enum CheckTokenResult {
+  /// 服务器明确判定 token 有效（HTTP 200 且 valid=true）。
+  valid,
+
+  /// 服务器明确判定 token 无效（HTTP 401/403，或响应 valid=false）→ 应登出。
+  invalid,
+
+  /// 网络/服务层异常（连接超时、连接失败、5xx、证书错误、取消等）→
+  /// 无法判定 token 是否有效，应保留登录态，待网络恢复后再校验。
+  unavailable,
+}
+
 class AuthApi {
   static final _dio = ApiClient().dio;
   
+
+
   
-  
-  
+
+
   static Future<Map<String, dynamic>> login(String username, String password) async {
     try {
       // 发送原始密码以支持 Argon2id 验证（HTTPS 加密传输）
@@ -69,22 +87,44 @@ class AuthApi {
     }
   }
   
-  
-  static Future<bool> checkToken(String token) async {
+
+  /// 校验本地 token 是否仍然有效。
+  ///
+  /// 三态返回，严禁把网络异常当作「token 无效」：
+  /// - 服务器返回 200 且 valid=true            → [CheckTokenResult.valid]
+  /// - 服务器返回 401/403，或 200 但 valid=false → [CheckTokenResult.invalid]（应登出）
+  /// - 超时/连接失败/5xx/证书错误/解析异常等     → [CheckTokenResult.unavailable]（保留登录态）
+  static Future<CheckTokenResult> checkToken(String token) async {
     try {
       // 显式把入参 token 放进 Authorization 头，不依赖已登录态拦截器。
       final response = await _dio.get(
         '/api/check_token',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
-      return response.statusCode == 200 && response.data['valid'] == true;
-    } catch (e) {
-      return false;
+      if (response.statusCode == 200 && response.data['valid'] == true) {
+        return CheckTokenResult.valid;
+      }
+      // 有响应但未确认有效（如 valid=false）：服务器明确判定无效
+      return CheckTokenResult.invalid;
+    } on DioException catch (e) {
+      final status = e.response?.statusCode;
+      if (status == 401 || status == 403) {
+        // 服务器明确拒绝该 token → 真正失效，应登出
+        return CheckTokenResult.invalid;
+      }
+      // 其余均为网络/服务层异常（连接超时、连接失败、5xx、证书错误、取消等）：
+      // 不能据此判定 token 失效，保留登录态
+      return CheckTokenResult.unavailable;
+    } catch (_) {
+      // 响应解析等未知异常：保守视为不可用，不误判 token 失效
+      return CheckTokenResult.unavailable;
     }
   }
   
+
   
-  
+
+
   static Future<Map<String, dynamic>> changePassword(
     String oldPassword,
     String newPassword,
@@ -122,6 +162,7 @@ class AuthApi {
     String newPassword,
   ) async {
     try {
+      // 发送原始密码以支持 Argon2id 验证
       final response = await _dio.post('/api/users/me/change-password', data: {
         'password': newPassword,
       });
@@ -140,9 +181,9 @@ class AuthApi {
       if (errorData != null && errorData['error'] != null) {
         throw Exception(errorData['error']);
       }
-      throw Exception('修改密码失败');
+      throw Exception(errorData['error']);
     } catch (e) {
-      throw Exception('修改密码失败: $e');
+      throw Exception('修改密码失败');
     }
   }
 }

@@ -1,0 +1,27 @@
+# Flutter/Dart build artifacts
+build/
+.dart_tool/
+pubspec.lock
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter_build_callback_cache
+.flutter_tool.*
+.packages
+
+# Android
+android/.kotlin/
+android/.gradle/
+android/local.properties
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Certs are deploy-time files placed before packaging (keep README)
+assets/certs/*.crt
+assets/certs/*.cer
+!assets/certs/README.md
+
+# Misc
+*.log
