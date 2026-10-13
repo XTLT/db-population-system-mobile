@@ -3,7 +3,7 @@ description: 人口通移动端
 
 publish_to: 'none'
 
-version: 0.0.19+19
+version: 0.0.20+20
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
