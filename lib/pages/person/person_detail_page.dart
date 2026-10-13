@@ -245,6 +245,8 @@ class _PersonDetailPageState extends State<PersonDetailPage>
           _buildInfoSection('联系信息', [
             _buildInfoItem('电话', person.phone, copyable: true),
             _buildInfoItem('地址', person.address),
+            if (person.groupName != null && person.groupName!.isNotEmpty)
+              _buildInfoItem('小组', person.groupName),
           ]),
 
           _buildInfoSection('社会保障', [

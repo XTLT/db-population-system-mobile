@@ -58,6 +58,7 @@ class Person {
   final String? name;
   final String? huHao;
   final String? address;
+  final String? groupName;
   final String? relation;
   final String? phone;
   final String? age;
@@ -95,6 +96,7 @@ class Person {
     this.name,
     this.huHao,
     this.address,
+    this.groupName,
     this.relation,
     this.phone,
     this.age,
@@ -134,6 +136,7 @@ class Person {
       name: json['name'],
       huHao: json['hu_hao'],
       address: json['address'],
+      groupName: json['group_name'],
       relation: json['relation'],
       phone: json['phone'],
       age: json['age'],
@@ -176,6 +179,7 @@ class Person {
       'name': name,
       'hu_hao': huHao,
       'address': address,
+      'group_name': groupName,
       'relation': relation,
       'phone': phone,
       'age': age,

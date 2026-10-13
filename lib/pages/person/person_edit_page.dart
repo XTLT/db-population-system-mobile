@@ -26,6 +26,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
   late TextEditingController _nameController;
   late TextEditingController _huHaoController;
   late TextEditingController _addressController;
+  late TextEditingController _groupNameController;
   late TextEditingController _relationController;
   late TextEditingController _phoneController;
   late TextEditingController _remarkController;
@@ -124,6 +125,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
       text: widget.person?.huHao ?? widget.initialHuHao ?? ''
     );
     _addressController = TextEditingController(text: widget.person?.address ?? '');
+    _groupNameController = TextEditingController(text: widget.person?.groupName ?? '');
     _relationController = TextEditingController(text: widget.person?.relation ?? '');
     _phoneController = TextEditingController(text: widget.person?.phone ?? '');
     _remarkController = TextEditingController(text: widget.person?.remark ?? '');
@@ -182,6 +184,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _nameController.dispose();
     _huHaoController.dispose();
     _addressController.dispose();
+    _groupNameController.dispose();
     _relationController.dispose();
     _phoneController.dispose();
     _remarkController.dispose();
@@ -586,6 +589,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
         'name': _nameController.text.trim(),
         'hu_hao': _huHaoController.text.trim(),
         'address': _addressController.text.trim(),
+        'group_name': _groupNameController.text.trim(),
         'relation': _relationController.text.trim(),
         'phone': _phoneController.text.trim(),
         'is_dead': _isDead,
@@ -795,6 +799,11 @@ class _PersonEditPageState extends State<PersonEditPage> {
                       label: '地址',
                       validator: Validators.validateAddress,
                       maxLines: 2,
+                    ),
+                    _buildTextField(
+                      controller: _groupNameController,
+                      label: '小组',
+                      maxLines: 1,
                     ),
                   ]),
                   
