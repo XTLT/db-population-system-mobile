@@ -268,9 +268,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
       if (graduationDate.isEmpty) {
         final totalYears = gradeToYears[_grade] ?? 0;
         if (totalYears > 0) {
-          
-          
-          final gradYear = enrollmentYear + totalYears;
+          // 毕业年份 = 入学年份 + 已读年级偏移 + 剩余学年数
+          // 例：六年级在读(2026-2027学年) → 2021 + 5 + 1 = 2027-06-30 毕业
+          final gradYear = enrollmentYear + offset + totalYears;
           graduationDate = '$gradYear-06-30';
         }
       }
