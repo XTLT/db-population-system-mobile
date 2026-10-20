@@ -21,7 +21,7 @@ class AppConfig {
   
   
   static const String appName = '人口通';
-  static const String appVersion = '0.0.22';
+  static const String appVersion = '0.0.23';
   
   
   

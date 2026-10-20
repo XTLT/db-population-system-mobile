@@ -18,6 +18,7 @@ class ApiClient {
   String? _token;
   String? _effectiveBaseUrl; // 回退成功后缓存，避免每次请求都重试
   String? _pinnedCertFingerprint; // 服务器证书 SHA-256 指纹（从 assets 加载）
+  SecurityContext? _mtlsContext; // mTLS：客户端证书上下文（从 assets 加载）
 
   final Map<String, int> _activeRequests = {};
   static const int _maxConcurrentRequests = 20;  
@@ -207,7 +208,8 @@ class ApiClient {
     ));
   }
   
-  /// 从 assets 加载服务器证书，计算 SHA-256 指纹用于钉扎验证
+  /// 从 assets 加载服务器证书，计算 SHA-256 指纹用于钉扎验证；
+  /// 同时加载客户端证书（client.crt/client.key）构造 mTLS 上下文
   Future<void> _loadPinnedCert() async {
     try {
       final data = await rootBundle.load('assets/certs/server.crt');
@@ -217,6 +219,18 @@ class ApiClient {
       debugPrint('证书钉扎: 已加载服务器证书指纹');
     } catch (e) {
       debugPrint('证书钉扎: 加载证书失败: $e');
+    }
+    // mTLS：加载客户端证书与私钥（服务器 verify=2 强制要求客户端出示证书）
+    try {
+      final cData = await rootBundle.load('assets/certs/client.crt');
+      final kData = await rootBundle.load('assets/certs/client.key');
+      final sc = SecurityContext(withTrustedRoots: false);
+      sc.useCertificateChainBytes(cData.buffer.asUint8List());
+      sc.usePrivateKeyBytes(kData.buffer.asUint8List());
+      _mtlsContext = sc;
+      debugPrint('证书钉扎+mTLS: 已加载客户端证书');
+    } catch (e) {
+      debugPrint('mTLS: 加载客户端证书失败: $e');
     }
   }
 
@@ -247,10 +261,12 @@ class ApiClient {
     return false;
   }
 
-  /// 为外部 Dio 实例（如 healthDio）设置证书钉扎
+  /// 为外部 Dio 实例（如 healthDio）设置证书钉扎 + mTLS 客户端证书
   static void applyCertificatePinning(Dio dio) {
     dio.httpClientAdapter = IOHttpClientAdapter(
-      onHttpClientCreate: (client) {
+      createHttpClient: () {
+        final ctx = _instance._mtlsContext;
+        final client = ctx != null ? HttpClient(context: ctx) : HttpClient();
         client.badCertificateCallback = (X509Certificate cert, String host, int port) {
           return _instance._verifyPinnedCert(cert, host);
         };
@@ -265,8 +281,12 @@ class ApiClient {
   /// 1. 从 assets/certs/server.crt 加载证书，计算 SHA-256 指纹
   /// 2. badCertificateCallback 中比对服务器证书指纹，匹配才放行
   /// 3. 证书未加载时拒绝所有连接（fail closed）
+  /// 4. mTLS：HttpClient 注入客户端证书上下文，TLS 握手时向服务器出示
   void _initCertificatePinning() {
-    (_dio.httpClientAdapter as IOHttpClientAdapter).onHttpClientCreate = (HttpClient client) {
+    final adapter = (_dio.httpClientAdapter as IOHttpClientAdapter);
+    adapter.createHttpClient = () {
+      final ctx = _mtlsContext;
+      final client = ctx != null ? HttpClient(context: ctx) : HttpClient();
       client.connectionTimeout = const Duration(seconds: 15);
       client.badCertificateCallback = (X509Certificate cert, String host, int port) {
         return _verifyPinnedCert(cert, host);
