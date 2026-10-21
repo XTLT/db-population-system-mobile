@@ -105,6 +105,9 @@ class UpdateService {
         headers: {'User-Agent': 'PopulationApp/1.0'},
       ));
 
+      // 服务器直连下载需要 mTLS 客户端证书 + 服务器证书钉扎（ApiClient 提供）
+      ApiClient.applyCertificatePinning(downloadDio);
+
       await downloadDio.download(
         downloadUrl,
         filePath,
