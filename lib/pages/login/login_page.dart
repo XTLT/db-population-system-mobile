@@ -242,8 +242,9 @@ class _LoginPageState extends State<LoginPage> {
     try {
       
       final dio = Dio();
-      dio.options.connectTimeout = const Duration(seconds: 10);
-      dio.options.receiveTimeout = const Duration(seconds: 10);
+      // 4G/弱网下首连较慢，放宽到 20 秒避免误报"连接失败"
+      dio.options.connectTimeout = const Duration(seconds: 20);
+      dio.options.receiveTimeout = const Duration(seconds: 20);
       
       // 证书钉扎（与 ApiClient 共用）
       ApiClient.applyCertificatePinning(dio);

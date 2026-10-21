@@ -29,7 +29,8 @@ class ApiClient {
   ApiClient._internal() {
     _dio = Dio(BaseOptions(
       baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 5),
+      // 4G/IPv6 慢网络下 TLS+mTLS 首连较慢，放宽到 15 秒
+      connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 15),
       sendTimeout: const Duration(seconds: 15),
       headers: {
@@ -356,8 +357,8 @@ class ApiClient {
   Future<bool> _checkDomain(String url) async {
     try {
       final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 5),
-        receiveTimeout: const Duration(seconds: 5),
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
       ));
       applyCertificatePinning(dio);
       final response = await dio.get('$url/api/health');
