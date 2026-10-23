@@ -7,6 +7,7 @@ import '../../utils/validators.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_data_service.dart';
 import '../../api/api_client.dart';
+import '../../constants/relation_list.dart';
 
 class PersonEditPage extends StatefulWidget {
   final Person? person; 
@@ -815,10 +816,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
                       label: '户号',
                       enabled: widget.initialHuHao == null, 
                     ),
-                    _buildTextField(
-                      controller: _relationController,
-                      label: '与户主关系',
-                    ),
+                    _buildRelationDropdown(),
                     _buildDropdown(
                       value: _isDead,
                       label: '是否死亡',
@@ -1143,6 +1141,33 @@ class _PersonEditPageState extends State<PersonEditPage> {
     );
   }
   
+  /// 与户主关系：标准下拉（存量不在标准列表的旧值自动并入选项，避免丢失）
+  Widget _buildRelationDropdown() {
+    final current = _relationController.text.trim();
+    final items = <String>[...kRelations];
+    if (current.isNotEmpty && !items.contains(current)) {
+      items.insert(0, current);
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: DropdownButtonFormField<String>(
+        initialValue: current.isEmpty ? null : current,
+        decoration: const InputDecoration(
+          labelText: '与户主关系',
+          border: OutlineInputBorder(),
+        ),
+        items: [
+          for (final r in items) DropdownMenuItem(value: r, child: Text(r)),
+        ],
+        onChanged: (v) {
+          setState(() {
+            _relationController.text = v ?? '';
+          });
+        },
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
