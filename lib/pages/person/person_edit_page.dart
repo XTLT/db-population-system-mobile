@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/person.dart';
@@ -162,6 +163,50 @@ class _PersonEditPageState extends State<PersonEditPage> {
     
     
     _idCardController.addListener(_onIdCardChanged);
+    
+    // 新增人员时：自动带出同户户号成员的地址和小组（与 desktop 端行为一致）
+    if (widget.person == null) {
+      final huhao = _huHaoController.text.trim();
+      if (huhao.isNotEmpty) {
+        _autoFillAddressAndGroup(huhao);
+      }
+      _huHaoController.addListener(_onHuHaoChanged);
+    }
+  }
+
+  Timer? _huHaoDebounce;
+
+  void _onHuHaoChanged() {
+    _huHaoDebounce?.cancel();
+    _huHaoDebounce = Timer(const Duration(milliseconds: 400), () {
+      final huhao = _huHaoController.text.trim();
+      if (huhao.isEmpty) return;
+      _autoFillAddressAndGroup(huhao);
+    });
+  }
+
+  // 查询同户户号成员，自动填充地址和小组（只填空值，不覆盖用户已输入内容）
+  Future<void> _autoFillAddressAndGroup(String huHao) async {
+    if (widget.person != null) return;
+    try {
+      final members = await PersonApi.getFamilyMembers(huHao);
+      if (!mounted) return;
+      for (final m in members) {
+        final addr = (m.address ?? '').trim();
+        if (addr.isNotEmpty) {
+          if (_addressController.text.trim().isEmpty) {
+            _addressController.text = addr;
+          }
+          final grp = (m.groupName ?? '').trim();
+          if (grp.isNotEmpty && _groupNameController.text.trim().isEmpty) {
+            _groupNameController.text = grp;
+          }
+          return;
+        }
+      }
+    } catch (_) {
+      // 查询失败静默（离线等场景不阻塞表单）
+    }
   }
   
   void _onIdCardChanged() {
@@ -180,8 +225,10 @@ class _PersonEditPageState extends State<PersonEditPage> {
   
   @override
   void dispose() {
+    _huHaoDebounce?.cancel();
     _idCardController.dispose();
     _nameController.dispose();
+    _huHaoController.removeListener(_onHuHaoChanged);
     _huHaoController.dispose();
     _addressController.dispose();
     _groupNameController.dispose();
