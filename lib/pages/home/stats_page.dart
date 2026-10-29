@@ -411,6 +411,7 @@ class _PersonStatsTab extends StatelessWidget {
       '脱贫不稳定户': Colors.teal,
       '边缘易致贫户': Colors.orange,
       '突发严重困难户': Colors.red,
+      '一般户': Colors.grey,
       '监测户': Colors.orange,
       '其他': Colors.blue,
     };
