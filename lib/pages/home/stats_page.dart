@@ -232,6 +232,7 @@ class _PersonStatsTab extends StatelessWidget {
   
   Widget _buildSummaryCard() {
     final totalCount = stats?['total'] ?? 0;
+    final householdCount = stats?['household_count'] ?? 0;
     final aliveCount = stats?['alive'] ?? 0;
     final deadCount = stats?['dead'] ?? 0;
     final migratedCount = stats?['migrated'] ?? 0;
@@ -245,7 +246,14 @@ class _PersonStatsTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 _buildStatItem('总人数', totalCount.toString(), Colors.blue),
+                _buildStatItem('户数', householdCount.toString(), Colors.teal),
                 _buildStatItem('在世', aliveCount.toString(), Colors.green),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
                 _buildStatItem('已死亡', deadCount.toString(), Colors.grey),
                 _buildStatItem('迁移', migratedCount.toString(), Colors.orange),
               ],
@@ -548,6 +556,10 @@ class _PersonStatsTab extends StatelessWidget {
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+                        // 必须固定 interval=1，否则 fl_chart 会按图表宽度自动跳间隔
+                        // （4 个等级时只显示 2 个标签，横轴"只显示一半"）
+                        interval: 1,
+                        reservedSize: 30,
                         getTitlesWidget: (value, meta) {
                           final idx = value.toInt();
                           if (idx >= 0 && idx < sortedLabels.length) {
