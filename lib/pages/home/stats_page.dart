@@ -307,6 +307,7 @@ class _PersonStatsTab extends StatelessWidget {
   Widget _buildSocialSecurityStats(BuildContext context) {
     final disabilityCount = stats?['disability'] ?? 0;
     final dibaoCount = stats?['dibao'] ?? 0;
+    final dibaoBorderCount = stats?['dibao_border'] ?? 0;
     final tekunCount = stats?['tekun'] ?? 0;
     final tekunTypeDistribution = stats?['tekun_type_distribution'] as Map<String, dynamic>? ?? {};
     
@@ -321,9 +322,17 @@ class _PersonStatsTab extends StatelessWidget {
               ));
             }),
             const Divider(),
+            // 低保人员：仅低保口径（是/特困家庭/最低生活保障家庭/单人保家庭），不含低保边缘家庭
             _buildStatRow('低保人员', dibaoCount, Colors.orange, onTap: () {
               Navigator.push(context, MaterialPageRoute(
-                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '是,低保边缘家庭,特困家庭,最低生活保障家庭,最低生活保障边缘家庭,单人保家庭'),
+                builder: (_) => const FilteredPersonListPage(title: '低保人员', dibao: '是'),
+              ));
+            }),
+            const Divider(),
+            // 低保边缘家庭：单独统计，不计算在低保人员里面
+            _buildStatRow('低保边缘家庭', dibaoBorderCount, Colors.brown, onTap: () {
+              Navigator.push(context, MaterialPageRoute(
+                builder: (_) => const FilteredPersonListPage(title: '低保边缘家庭', dibao: '低保边缘家庭,最低生活保障边缘家庭'),
               ));
             }),
             const Divider(),
