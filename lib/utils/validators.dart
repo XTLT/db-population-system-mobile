@@ -64,20 +64,17 @@ class Validators {
       return null; 
     }
     
-    
-    if (value.length == 11) {
-      if (!RegExp(r'^1[3-9]\d{9}$').hasMatch(value)) {
-        return '手机号格式不正确';
-      }
+    // 11 位手机号
+    if (RegExp(r'^1[3-9]\d{9}$').hasMatch(value)) {
+      return null;
     }
     
-    else {
-      if (!RegExp(r'^\d{3,4}-?\d{7,8}$').hasMatch(value)) {
-        return '电话格式不正确';
-      }
+    // 固话：区号 0 开头（10-12 位，可带 -）
+    if (RegExp(r'^0\d{2,3}-?\d{7,8}$').hasMatch(value)) {
+      return null;
     }
     
-    return null;
+    return '电话号码不对！';
   }
   
   
