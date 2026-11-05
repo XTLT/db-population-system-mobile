@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/student.dart';
 import '../../api/student_api.dart';
 import '../../services/connectivity_service.dart';
@@ -233,6 +234,9 @@ class _StudentEditPageState extends State<StudentEditPage> {
                       label: '监护人电话',
                       validator: Validators.validatePhone,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      ],
                     ),
                     _buildDropdown(
                       value: _isLeftBehind,
@@ -301,6 +305,7 @@ class _StudentEditPageState extends State<StudentEditPage> {
     TextInputType? keyboardType,
     bool enabled = true,
     String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -315,6 +320,7 @@ class _StudentEditPageState extends State<StudentEditPage> {
         keyboardType: keyboardType,
         enabled: enabled,
         validator: validator,
+        inputFormatters: inputFormatters,
       ),
     );
   }

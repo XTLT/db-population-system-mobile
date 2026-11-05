@@ -8,7 +8,7 @@ class Validators {
 
     // 与服务端同一口径：必须 18 位，前 17 位数字 + 校验位（最后一位可为 X），
     // 且出生年月日必须合法；15 位身份证不再支持
-    final idCard = value.trim().toUpperCase();
+    final idCard = value.replaceAll(RegExp(r'\s'), '').toUpperCase();
     if (idCard.length != 18) {
       return '身份证号长度不正确';
     }
@@ -80,8 +80,8 @@ class Validators {
     if (value == null) {
       return null;
     }
-    // 与桌面端一致：先去首尾空格，空值放行
-    final phone = value.trim();
+    // 与桌面端一致：先去掉所有空白，空值放行
+    final phone = value.replaceAll(RegExp(r'\s'), '');
     if (phone.isEmpty) {
       return null;
     }

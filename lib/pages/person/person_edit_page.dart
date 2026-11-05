@@ -838,6 +838,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
                       label: '电话',
                       validator: Validators.validatePhone,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      ],
                     ),
                     _buildTextField(
                       controller: _addressController,
@@ -1025,6 +1028,9 @@ class _PersonEditPageState extends State<PersonEditPage> {
                       label: '监护人电话',
                       validator: Validators.validatePhone,
                       keyboardType: TextInputType.phone,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9]')),
+                      ],
                     ),
                     _buildDropdown(
                       value: _isLeftBehind,
