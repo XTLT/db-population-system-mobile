@@ -3,6 +3,7 @@ import '../../models/student.dart';
 import '../../api/student_api.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_data_service.dart';
+import '../../utils/validators.dart';
 
 class StudentEditPage extends StatefulWidget {
   final Student? student;
@@ -230,6 +231,7 @@ class _StudentEditPageState extends State<StudentEditPage> {
                     _buildTextField(
                       controller: _guardianPhoneController,
                       label: '监护人电话',
+                      validator: Validators.validatePhone,
                       keyboardType: TextInputType.phone,
                     ),
                     _buildDropdown(
@@ -298,6 +300,7 @@ class _StudentEditPageState extends State<StudentEditPage> {
     String? hintText,
     TextInputType? keyboardType,
     bool enabled = true,
+    String? Function(String?)? validator,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -311,6 +314,7 @@ class _StudentEditPageState extends State<StudentEditPage> {
         ),
         keyboardType: keyboardType,
         enabled: enabled,
+        validator: validator,
       ),
     );
   }

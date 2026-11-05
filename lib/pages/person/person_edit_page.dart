@@ -1023,6 +1023,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
                     _buildTextField(
                       controller: _guardianPhoneController,
                       label: '监护人电话',
+                      validator: Validators.validatePhone,
                       keyboardType: TextInputType.phone,
                     ),
                     _buildDropdown(

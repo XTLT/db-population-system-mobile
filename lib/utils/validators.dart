@@ -60,20 +60,20 @@ class Validators {
   
   
   static String? validatePhone(String? value) {
-    if (value == null || value.isEmpty) {
-      return null; 
-    }
-    
-    // 11 位手机号
-    if (RegExp(r'^1[3-9]\d{9}$').hasMatch(value)) {
+    if (value == null) {
       return null;
     }
-    
-    // 固话：区号 0 开头（10-12 位，可带 -）
-    if (RegExp(r'^0\d{2,3}-?\d{7,8}$').hasMatch(value)) {
+    // 与桌面端一致：先去首尾空格，空值放行
+    final phone = value.trim();
+    if (phone.isEmpty) {
       return null;
     }
-    
+
+    // 仅 11 位手机号（不校验座机，业务上只录手机号）
+    if (RegExp(r'^1[3-9]\d{9}$').hasMatch(phone)) {
+      return null;
+    }
+
     return '电话号码不对！';
   }
   
