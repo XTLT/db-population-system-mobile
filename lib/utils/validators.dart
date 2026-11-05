@@ -5,38 +5,55 @@ class Validators {
     if (value == null || value.isEmpty) {
       return '身份证号不能为空';
     }
-    
-    
-    if (value.length != 15 && value.length != 18) {
+
+    // 与服务端同一口径：必须 18 位，前 17 位数字 + 校验位（最后一位可为 X），
+    // 且出生年月日必须合法；15 位身份证不再支持
+    final idCard = value.trim().toUpperCase();
+    if (idCard.length != 18) {
       return '身份证号长度不正确';
     }
-    
-    
-    if (value.length == 18) {
-      final weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
-      final checkCodes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
-      
-      int sum = 0;
-      for (int i = 0; i < 17; i++) {
-        if (!RegExp(r'\d').hasMatch(value[i])) {
-          return '身份证号格式不正确';
-        }
-        sum += int.parse(value[i]) * weights[i];
-      }
-      
-      final checkCode = checkCodes[sum % 11];
-      if (value[17].toUpperCase() != checkCode) {
-        return '身份证号校验不通过';
+
+    if (!RegExp(r'^\d{17}[\dX]$').hasMatch(idCard)) {
+      return '身份证号格式不正确';
+    }
+
+    final weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+    final checkCodes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
+
+    int sum = 0;
+    for (int i = 0; i < 17; i++) {
+      sum += int.parse(idCard[i]) * weights[i];
+    }
+
+    if (idCard[17] != checkCodes[sum % 11]) {
+      return '身份证号校验不通过';
+    }
+
+    // 出生年月日合法性（与服务端一致：年份 1900~今年、月份 1-12、
+    // 日按大小月与闰年判断）
+    final year = int.parse(idCard.substring(6, 10));
+    final month = int.parse(idCard.substring(10, 12));
+    final day = int.parse(idCard.substring(12, 14));
+
+    if (year < 1900 || year > DateTime.now().year) {
+      return '身份证号出生年份无效';
+    }
+    if (month < 1 || month > 12) {
+      return '身份证号出生月份无效';
+    }
+    if (day < 1 || day > 31) {
+      return '身份证号出生日期无效';
+    }
+    if ([4, 6, 9, 11].contains(month) && day > 30) {
+      return '身份证号出生日期无效';
+    }
+    if (month == 2) {
+      final isLeap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+      if (day > (isLeap ? 29 : 28)) {
+        return '身份证号出生日期无效';
       }
     }
-    
-    
-    if (value.length == 15) {
-      if (!RegExp(r'^\d{15}$').hasMatch(value)) {
-        return '身份证号格式不正确';
-      }
-    }
-    
+
     return null;
   }
   
