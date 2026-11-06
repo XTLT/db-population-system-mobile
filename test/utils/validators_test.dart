@@ -10,9 +10,9 @@ void main() {
       });
 
       test('should return error for invalid length', () {
-        expect(Validators.validateIdCard('123'), '身份证号长度不正确');
-        expect(Validators.validateIdCard('12345678901234'), '身份证号长度不正确');
-        expect(Validators.validateIdCard('12345678901234567890'), '身份证号长度不正确');
+        expect(Validators.validateIdCard('123'), '身份证号必须为18位');
+        expect(Validators.validateIdCard('12345678901234'), '身份证号必须为18位');
+        expect(Validators.validateIdCard('12345678901234567890'), '身份证号必须为18位');
       });
 
       test('should validate 18-digit id card', () {
@@ -24,17 +24,33 @@ void main() {
 
       test('should return error for invalid 18-digit id card', () {
         // 校验码错误
-        expect(Validators.validateIdCard('110105194912310022'), '身份证号校验不通过');
+        expect(Validators.validateIdCard('110105194912310022'), '身份证号校验位错误');
       });
 
       test('should reject 15-digit id card', () {
         // 方案二：15 位不再支持录入校验，统一要求 18 位（读老数据的 extract* 仍兼容）
-        expect(Validators.validateIdCard('123456789012345'), '身份证号长度不正确');
+        expect(Validators.validateIdCard('123456789012345'), '身份证号必须为18位');
       });
 
       test('should return error for non-digit 15-digit id card', () {
         // 15 位先被长度规则拦下，走不到格式校验
-        expect(Validators.validateIdCard('12345678901234A'), '身份证号长度不正确');
+        expect(Validators.validateIdCard('12345678901234A'), '身份证号必须为18位');
+      });
+
+      test('清洗后为空应报空值错误', () {
+        // 空值判断发生在去空白之后
+        expect(Validators.validateIdCard('   '), '身份证号不能为空');
+        expect(Validators.validateIdCard('\t\n '), '身份证号不能为空');
+      });
+
+      test('前 17 位含非数字应报对应文案', () {
+        expect(Validators.validateIdCard('5203A5199001011234'),
+            '身份证号前17位必须为数字');
+      });
+
+      test('末位不是数字或 X 应报对应文案', () {
+        expect(Validators.validateIdCard('52032519900101123A'),
+            '身份证号最后一位必须为数字或X');
       });
     });
 
@@ -78,25 +94,25 @@ void main() {
       });
 
       test('should return error for invalid mobile phone', () {
-        expect(Validators.validatePhone('12345678901'), '电话号码不对！');
-        expect(Validators.validatePhone('10012345678'), '电话号码不对！');
+        expect(Validators.validatePhone('12345678901'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('10012345678'), '电话号码格式无效，请输入11位手机号或座机号码');
       });
 
       test('should reject landline phone', () {
         // 业务上只录手机号，座机一律不放行
-        expect(Validators.validatePhone('010-12345678'), '电话号码不对！');
-        expect(Validators.validatePhone('0755-87654321'), '电话号码不对！');
-        expect(Validators.validatePhone('08511234567'), '电话号码不对！');
-        expect(Validators.validatePhone('0851-12345678'), '电话号码不对！');
+        expect(Validators.validatePhone('010-12345678'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('0755-87654321'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('08511234567'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('0851-12345678'), '电话号码格式无效，请输入11位手机号或座机号码');
       });
 
       test('should return error for invalid phone format', () {
         // 8位纯数字但没有区号，不符合固话格式
-        expect(Validators.validatePhone('12345678'), '电话号码不对！');
+        expect(Validators.validatePhone('12345678'), '电话号码格式无效，请输入11位手机号或座机号码');
         // 11位非数字字符
-        expect(Validators.validatePhone('abcdefghijk'), '电话号码不对！');
+        expect(Validators.validatePhone('abcdefghijk'), '电话号码格式无效，请输入11位手机号或座机号码');
         // 11位数字但不是有效手机号（第一位必须是1）
-        expect(Validators.validatePhone('02345678901'), '电话号码不对！');
+        expect(Validators.validatePhone('02345678901'), '电话号码格式无效，请输入11位手机号或座机号码');
       });
     });
 
@@ -157,8 +173,8 @@ void main() {
         expect(Validators.validatePhone(' 13800138000 '), null);
       });
 
-      test('带横杠仍应拒绝', () {
-        expect(Validators.validatePhone('138-0013-8000'), '电话号码不对！');
+      test('带横杠会被清洗掉，号码合法则通过', () {
+        expect(Validators.validatePhone('138-0013-8000'), null);
       });
 
       test('全空格视为空值放行', () {
@@ -284,9 +300,10 @@ void main() {
         expect(Validators.validateIdCard('11010519491231002x'), null);
       });
 
-      test('18 位前 17 位含字母应报格式不正确', () {
+      test('18 位前 17 位含字母应报位数文案', () {
         // 前 17 位里混入字母（长度仍为 18）
-        expect(Validators.validateIdCard('1101051949123100AX'), '身份证号格式不正确');
+        expect(Validators.validateIdCard('1101051949123100AX'),
+            '身份证号前17位必须为数字');
       });
     });
 

@@ -1,20 +1,22 @@
 
 class Validators {
   
+  // 口径与服务端 utils/common/validate_id_card.py 完全一致（提示文案亦同）：
+  // 去所有空白 -> 必须 18 位（前 17 位数字 + 末位数字或 X）-> 校验位 -> 出生日期。
   static String? validateIdCard(String? value) {
-    if (value == null || value.isEmpty) {
+    final idCard = (value ?? '').replaceAll(RegExp(r'\s'), '').toUpperCase();
+
+    if (idCard.isEmpty) {
       return '身份证号不能为空';
     }
-
-    // 与服务端同一口径：必须 18 位，前 17 位数字 + 校验位（最后一位可为 X），
-    // 且出生年月日必须合法；15 位身份证不再支持
-    final idCard = value.replaceAll(RegExp(r'\s'), '').toUpperCase();
     if (idCard.length != 18) {
-      return '身份证号长度不正确';
+      return '身份证号必须为18位';
     }
-
-    if (!RegExp(r'^\d{17}[\dX]$').hasMatch(idCard)) {
-      return '身份证号格式不正确';
+    if (!RegExp(r'^\d{17}$').hasMatch(idCard.substring(0, 17))) {
+      return '身份证号前17位必须为数字';
+    }
+    if (!RegExp(r'^[\dX]$').hasMatch(idCard[17])) {
+      return '身份证号最后一位必须为数字或X';
     }
 
     final weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
@@ -26,11 +28,10 @@ class Validators {
     }
 
     if (idCard[17] != checkCodes[sum % 11]) {
-      return '身份证号校验不通过';
+      return '身份证号校验位错误';
     }
 
-    // 出生年月日合法性（与服务端一致：年份 1900~今年、月份 1-12、
-    // 日按大小月与闰年判断）
+    // 出生日期：年份 1900~今年、月份 1-12、日按大小月与闰年判断
     final year = int.parse(idCard.substring(6, 10));
     final month = int.parse(idCard.substring(10, 12));
     final day = int.parse(idCard.substring(12, 14));
@@ -76,22 +77,19 @@ class Validators {
   }
   
   
+  // 口径与服务端 utils/common/validate_phone.py 完全一致（提示文案亦同）：
+  // 去首尾空白并剔除 "-" 与空白 -> 空值放行 -> 仅 11 位手机号，座机拒绝。
   static String? validatePhone(String? value) {
-    if (value == null) {
-      return null;
-    }
-    // 与桌面端一致：先去掉所有空白，空值放行
-    final phone = value.replaceAll(RegExp(r'\s'), '');
+    final phone = (value ?? '').replaceAll(RegExp(r'[-\s]'), '');
     if (phone.isEmpty) {
       return null;
     }
 
-    // 仅 11 位手机号（不校验座机，业务上只录手机号）
     if (RegExp(r'^1[3-9]\d{9}$').hasMatch(phone)) {
       return null;
     }
 
-    return '电话号码不对！';
+    return '电话号码格式无效，请输入11位手机号或座机号码';
   }
   
   
