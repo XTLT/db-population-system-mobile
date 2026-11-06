@@ -27,13 +27,14 @@ void main() {
         expect(Validators.validateIdCard('110105194912310022'), '身份证号校验不通过');
       });
 
-      test('should validate 15-digit id card', () {
-        // 有效的15位身份证号
-        expect(Validators.validateIdCard('123456789012345'), null);
+      test('should reject 15-digit id card', () {
+        // 方案二：15 位不再支持录入校验，统一要求 18 位（读老数据的 extract* 仍兼容）
+        expect(Validators.validateIdCard('123456789012345'), '身份证号长度不正确');
       });
 
       test('should return error for non-digit 15-digit id card', () {
-        expect(Validators.validateIdCard('12345678901234A'), '身份证号格式不正确');
+        // 15 位先被长度规则拦下，走不到格式校验
+        expect(Validators.validateIdCard('12345678901234A'), '身份证号长度不正确');
       });
     });
 
@@ -77,22 +78,91 @@ void main() {
       });
 
       test('should return error for invalid mobile phone', () {
-        expect(Validators.validatePhone('12345678901'), '手机号格式不正确');
-        expect(Validators.validatePhone('10012345678'), '手机号格式不正确');
+        expect(Validators.validatePhone('12345678901'), '电话号码不对！');
+        expect(Validators.validatePhone('10012345678'), '电话号码不对！');
       });
 
-      test('should validate landline phone', () {
-        expect(Validators.validatePhone('010-12345678'), null);
-        expect(Validators.validatePhone('0755-87654321'), null);
+      test('should reject landline phone', () {
+        // 业务上只录手机号，座机一律不放行
+        expect(Validators.validatePhone('010-12345678'), '电话号码不对！');
+        expect(Validators.validatePhone('0755-87654321'), '电话号码不对！');
+        expect(Validators.validatePhone('08511234567'), '电话号码不对！');
+        expect(Validators.validatePhone('0851-12345678'), '电话号码不对！');
       });
 
       test('should return error for invalid phone format', () {
         // 8位纯数字但没有区号，不符合固话格式
-        expect(Validators.validatePhone('12345678'), '电话格式不正确');
-        // 11位非数字字符，被当作手机号验证
-        expect(Validators.validatePhone('abcdefghijk'), '手机号格式不正确');
+        expect(Validators.validatePhone('12345678'), '电话号码不对！');
+        // 11位非数字字符
+        expect(Validators.validatePhone('abcdefghijk'), '电话号码不对！');
         // 11位数字但不是有效手机号（第一位必须是1）
-        expect(Validators.validatePhone('02345678901'), '手机号格式不正确');
+        expect(Validators.validatePhone('02345678901'), '电话号码不对！');
+      });
+    });
+
+    // ===== 本次新增：空格清洗 + 出生日期合法性（与服务端同一口径） =====
+
+    group('validateIdCard 空格与出生日期', () {
+      // 补齐一位正确的校验位，构造"校验位一定合法"的号码，
+      // 这样才能真正测到出生日期分支（否则先被校验位拦下）
+      String makeId(String prefix17) {
+        const weights = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
+        const codes = ['1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2'];
+        var sum = 0;
+        for (var i = 0; i < 17; i++) {
+          sum += int.parse(prefix17[i]) * weights[i];
+        }
+        return prefix17 + codes[sum % 11];
+      }
+
+      test('粘贴带空格的 18 位号码应通过', () {
+        final id = makeId('52032519900101123');
+        final spaced =
+            '${id.substring(0, 4)} ${id.substring(4, 8)} ${id.substring(8, 12)} ${id.substring(12)}';
+        expect(Validators.validateIdCard(spaced), null);
+      });
+
+      test('中间有制表符应通过', () {
+        final id = makeId('52032519900101123');
+        expect(
+            Validators.validateIdCard('${id.substring(0, 10)}\t${id.substring(10)}'),
+            null);
+      });
+
+      test('出生日期非法但校验位正确时，应报对应日期错误', () {
+        expect(Validators.validateIdCard(makeId('52032519900230123')),
+            '身份证号出生日期无效'); // 2 月 30 日
+        expect(Validators.validateIdCard(makeId('52032519900431123')),
+            '身份证号出生日期无效'); // 4 月 31 日
+        expect(Validators.validateIdCard(makeId('52032519901301123')),
+            '身份证号出生月份无效'); // 13 月
+        expect(Validators.validateIdCard(makeId('52032519900001123')),
+            '身份证号出生月份无效'); // 00 月
+        expect(Validators.validateIdCard(makeId('52032518000101123')),
+            '身份证号出生年份无效'); // 1800 年
+        expect(Validators.validateIdCard(makeId('52032519900100123')),
+            '身份证号出生日期无效'); // 0 日
+      });
+
+      test('闰年 2 月 29 日应通过，平年 2 月 29 日应拒绝', () {
+        expect(Validators.validateIdCard(makeId('52032519920229123')), null);
+        expect(Validators.validateIdCard(makeId('52032519900229123')),
+            '身份证号出生日期无效');
+      });
+    });
+
+    group('validatePhone 空格清洗', () {
+      test('粘贴带空格的手机号应通过', () {
+        expect(Validators.validatePhone('138 0013 8000'), null);
+        expect(Validators.validatePhone(' 13800138000 '), null);
+      });
+
+      test('带横杠仍应拒绝', () {
+        expect(Validators.validatePhone('138-0013-8000'), '电话号码不对！');
+      });
+
+      test('全空格视为空值放行', () {
+        expect(Validators.validatePhone('   '), null);
       });
     });
 
