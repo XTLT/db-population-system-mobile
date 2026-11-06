@@ -94,25 +94,25 @@ void main() {
       });
 
       test('should return error for invalid mobile phone', () {
-        expect(Validators.validatePhone('12345678901'), '电话号码格式无效，请输入11位手机号或座机号码');
-        expect(Validators.validatePhone('10012345678'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('12345678901'), '电话号码格式无效，请输入11位手机号');
+        expect(Validators.validatePhone('10012345678'), '电话号码格式无效，请输入11位手机号');
       });
 
       test('should reject landline phone', () {
         // 业务上只录手机号，座机一律不放行
-        expect(Validators.validatePhone('010-12345678'), '电话号码格式无效，请输入11位手机号或座机号码');
-        expect(Validators.validatePhone('0755-87654321'), '电话号码格式无效，请输入11位手机号或座机号码');
-        expect(Validators.validatePhone('08511234567'), '电话号码格式无效，请输入11位手机号或座机号码');
-        expect(Validators.validatePhone('0851-12345678'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('010-12345678'), '电话号码格式无效，请输入11位手机号');
+        expect(Validators.validatePhone('0755-87654321'), '电话号码格式无效，请输入11位手机号');
+        expect(Validators.validatePhone('08511234567'), '电话号码格式无效，请输入11位手机号');
+        expect(Validators.validatePhone('0851-12345678'), '电话号码格式无效，请输入11位手机号');
       });
 
       test('should return error for invalid phone format', () {
         // 8位纯数字但没有区号，不符合固话格式
-        expect(Validators.validatePhone('12345678'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('12345678'), '电话号码格式无效，请输入11位手机号');
         // 11位非数字字符
-        expect(Validators.validatePhone('abcdefghijk'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('abcdefghijk'), '电话号码格式无效，请输入11位手机号');
         // 11位数字但不是有效手机号（第一位必须是1）
-        expect(Validators.validatePhone('02345678901'), '电话号码格式无效，请输入11位手机号或座机号码');
+        expect(Validators.validatePhone('02345678901'), '电话号码格式无效，请输入11位手机号');
       });
     });
 
