@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:population_mobile/utils/validators.dart';
 
@@ -390,6 +393,46 @@ void main() {
       test('性别位含非数字应走 catch 返回 null', () {
         // 长度 18，但第 16 位（性别位）非数字
         expect(Validators.extractGender('1101051990010100X5'), isNull);
+      });
+    });
+    group('共享向量 validation_vectors.json', () {
+      late Map<String, dynamic> doc;
+
+      setUpAll(() {
+        final file = File('test/vectors/validation_vectors.json');
+        expect(file.existsSync(), isTrue,
+            reason: '缺少向量文件，先跑 server 仓库的 tests/vectors/sync_vectors.py');
+        doc = jsonDecode(file.readAsStringSync(encoding: utf8)) as Map<String, dynamic>;
+      });
+
+      test('身份证向量逐条与 server 基准一致', () {
+        final cases = (doc['id_card'] as List).cast<Map<String, dynamic>>();
+        expect(cases.isNotEmpty, isTrue, reason: '身份证向量为空');
+        for (final c in cases) {
+          final input = c['input'] as String;
+          final valid = c['valid'] as bool;
+          final msg = c['msg'] as String;
+          expect(
+            Validators.validateIdCard(input),
+            valid ? isNull : msg,
+            reason: '${c['note']} / $input',
+          );
+        }
+      });
+
+      test('电话向量逐条与 server 基准一致', () {
+        final cases = (doc['phone'] as List).cast<Map<String, dynamic>>();
+        expect(cases.isNotEmpty, isTrue, reason: '电话向量为空');
+        for (final c in cases) {
+          final input = c['input'] as String;
+          final valid = c['valid'] as bool;
+          final msg = c['msg'] as String;
+          expect(
+            Validators.validatePhone(input),
+            valid ? isNull : msg,
+            reason: '${c['note']} / $input',
+          );
+        }
       });
     });
   });
