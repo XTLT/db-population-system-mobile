@@ -5,6 +5,7 @@ import '../../api/batch_operation_api.dart';
 import '../../services/offline_data_service.dart';
 import '../person/person_detail_page.dart';
 import '../search/advanced_search_page.dart';
+import '../correction/pending_correction_page.dart';
 
 class PersonListPage extends StatefulWidget {
   const PersonListPage({super.key});
@@ -403,6 +404,19 @@ class _PersonListPageState extends State<PersonListPage> {
             ? '已选择 ${_selectedIds.length} 项' 
             : '人员列表'),
         actions: [
+          if (!_isSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.fact_check),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PendingCorrectionPage(),
+                  ),
+                );
+              },
+              tooltip: '待核销人员',
+            ),
           if (!_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.tune),

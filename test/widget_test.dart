@@ -1,4 +1,4 @@
-// Flutter widget test for population_mobile app.
+﻿// Flutter widget test for population_mobile app.
 //
 // Tests verify basic app structure and initialization.
 
@@ -20,7 +20,9 @@ void main() {
 
     test('Phone validation', () {
       expect(Validators.validatePhone('13800138000'), null);
-      expect(Validators.validatePhone('010-12345678'), null);
+      expect(Validators.validatePhone(''), null);
+      expect(Validators.validatePhone('010-12345678'),
+          '电话号码格式无效，请输入11位手机号');
     });
 
     test('Land area validation', () {

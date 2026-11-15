@@ -178,10 +178,8 @@ class AuthApi {
       throw Exception(data['message'] ?? '修改密码失败');
     } on DioException catch (e) {
       final errorData = e.response?.data;
-      if (errorData != null && errorData['error'] != null) {
-        throw Exception(errorData['error']);
-      }
-      throw Exception(errorData['error']);
+      final serverError = errorData is Map ? errorData['error'] : null;
+      throw Exception(serverError ?? '修改密码失败');
     } catch (e) {
       throw Exception('修改密码失败');
     }

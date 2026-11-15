@@ -101,27 +101,27 @@ void main() {
   });
 
   group('AuthApi.checkToken', () {
-    test('valid=true 时返回 true，GET /api/check_token', () async {
+    test('valid=true 时返回 valid，GET /api/check_token', () async {
       final rec = installMockAdapter((options) => jsonResponse({'valid': true}));
-      expect(await AuthApi.checkToken('any-token'), true);
+      expect(await AuthApi.checkToken('any-token'), CheckTokenResult.valid);
       final req = rec.last()!;
       expect(req.path, '/api/check_token');
       expect(req.method, 'GET');
     });
 
-    test('valid=false 时返回 false', () async {
+    test('valid=false 时返回 invalid', () async {
       installMockAdapter((options) => jsonResponse({'valid': false}));
-      expect(await AuthApi.checkToken('any-token'), false);
+      expect(await AuthApi.checkToken('any-token'), CheckTokenResult.invalid);
     });
 
-    test('响应缺省 valid 字段：视为 false', () async {
+    test('响应缺省 valid 字段：视为 invalid', () async {
       installMockAdapter((options) => jsonResponse({}));
-      expect(await AuthApi.checkToken('any-token'), false);
+      expect(await AuthApi.checkToken('any-token'), CheckTokenResult.invalid);
     });
 
-    test('HTTP 500：任何异常吞掉并返回 false', () async {
+    test('HTTP 500：返回 unavailable（保留登录态，不误登出）', () async {
       installMockAdapter((options) => jsonResponse({}, statusCode: 500));
-      expect(await AuthApi.checkToken('any-token'), false);
+      expect(await AuthApi.checkToken('any-token'), CheckTokenResult.unavailable);
     });
 
     test('注意：入参 token 不会放入 query/body，而是进入 Authorization 头', () async {

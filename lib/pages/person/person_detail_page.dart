@@ -19,13 +19,17 @@ class _PersonDetailPageState extends State<PersonDetailPage>
   late TabController _tabController;
   Person? _person;
   List<Person> _familyMembers = [];
+  /// 成员原始字段（身份证 -> 原始 Map），用于展示 subsidy_amount / student_mark
+  Map<String, Map<String, dynamic>> _familyRaw = {};
   bool _isLoading = true;
   String? _errorMessage;
+  Map<String, dynamic>? _subsidies;
+  String? _subsidiesError;
   
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
   
@@ -44,17 +48,40 @@ class _PersonDetailPageState extends State<PersonDetailPage>
       
       
       List<Person> familyMembers = [];
+      Map<String, Map<String, dynamic>> familyRaw = {};
       if (person.huHao != null && person.huHao!.isNotEmpty) {
         try {
-          familyMembers = await PersonApi.getFamilyMembers(person.huHao!);
+          final rawList = await PersonApi.getFamilyMembersRaw(person.huHao!);
+          familyMembers = rawList
+              .map((json) => Person.fromJson(json))
+              .toList();
+          for (final json in rawList) {
+            final key = (json['id_card'] ?? '').toString();
+            if (key.isNotEmpty) familyRaw[key] = json;
+          }
         } catch (e) {
-          
+          // 家庭成员加载失败不阻塞详情页主体，只影响"家庭成员"页签
+          debugPrint('加载家庭成员失败: $e');
+        }
+      }
+
+      // 补贴发放记录：失败不影响详情页主体，只在"补贴发放"页签内提示
+      Map<String, dynamic>? subsidies;
+      String? subsidiesError;
+      if (person.idCard != null && person.idCard!.isNotEmpty) {
+        try {
+          subsidies = await PersonApi.getPersonSubsidies(person.idCard!);
+        } catch (e) {
+          subsidiesError = e.toString();
         }
       }
       
       setState(() {
         _person = person;
         _familyMembers = familyMembers;
+        _familyRaw = familyRaw;
+        _subsidies = subsidies;
+        _subsidiesError = subsidiesError;
         _isLoading = false;
       });
     } catch (e) {
@@ -128,6 +155,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
           tabs: const [
             Tab(text: '基本信息'),
             Tab(text: '家庭成员'),
+            Tab(text: '补贴发放'),
           ],
         ),
       ),
@@ -154,6 +182,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                   children: [
                     _buildBasicInfo(),
                     _buildFamilyMembers(),
+                    _buildSubsidies(),
                   ],
                 ),
     );
@@ -381,6 +410,310 @@ class _PersonDetailPageState extends State<PersonDetailPage>
     );
   }
   
+  /// "补贴发放"页签：展示服务端按人聚合的 6 类补贴记录
+  Widget _buildSubsidies() {
+    if (_subsidiesError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 12),
+              Text('补贴记录加载失败：$_subsidiesError',
+                  textAlign: TextAlign.center),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final data = _subsidies;
+    final List<Map<String, dynamic>> byModule =
+        ((data?['by_module'] as List?) ?? const [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+    final List<Map<String, dynamic>> records =
+        ((data?['records'] as List?) ?? const [])
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+    final int totalCount = (data?['total_count'] as num?)?.toInt() ?? 0;
+    final bool truncated = data?['truncated'] == true;
+
+    if (totalCount == 0) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.receipt_long, size: 64, color: Colors.grey.shade300),
+            const SizedBox(height: 16),
+            Text('该人员暂无补贴发放记录',
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+            const SizedBox(height: 8),
+            Text('低保 / 高龄 / 地力 / 残疾护理 / 养老 / 特困 六类均无数据',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+          ],
+        ),
+      );
+    }
+
+    final children = <Widget>[];
+
+    // 六类汇总卡
+    children.add(Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: byModule.map((m) {
+        final count = (m['count'] as num?)?.toInt() ?? 0;
+        final amt = (m['total_amount'] ?? '').toString();
+        return Container(
+          width: 106,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: count > 0 ? Colors.blue.shade50 : Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text((m['label'] ?? '').toString(),
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Text('$count 笔',
+                  style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+              if (amt.isNotEmpty)
+                Text('¥$amt',
+                    style: TextStyle(fontSize: 12, color: Colors.orange.shade800)),
+            ],
+          ),
+        );
+      }).toList(),
+    ));
+
+    children.add(const SizedBox(height: 12));
+    children.add(Text(
+      truncated ? '发放明细（共 $totalCount 笔，仅显示最近 300 条）' : '发放明细（共 $totalCount 笔）',
+      style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+    ));
+    children.add(const SizedBox(height: 8));
+
+    for (final r in records) {
+      children.add(_buildSubsidyRecordTile(r));
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(12),
+      children: children,
+    );
+  }
+
+  /// 单条补贴发放记录：模块标签 + 期数 + 金额 + 支付状态（失败标红）
+  Widget _buildSubsidyRecordTile(Map<String, dynamic> r) {
+    final status = (r['payment_status'] ?? '').toString();
+    final failReason = (r['fail_reason'] ?? '').toString();
+    final amount = (r['amount'] ?? '').toString();
+    final period = (r['period'] ?? '').toString();
+    final label = (r['label'] ?? '').toString();
+
+    final bool failed = failReason.isNotEmpty || status.contains('失败');
+    final bool paid = !failed &&
+        (status.contains('成功') ||
+            status.contains('已支付') ||
+            status.contains('已发') ||
+            status.contains('已上账'));
+    final Color statusColor =
+        failed ? Colors.red : (paid ? Colors.green : Colors.grey.shade600);
+
+    final subtitleParts = <String>[];
+    if (status.isNotEmpty) subtitleParts.add(failed ? '未发放（$status）' : '状态: $status');
+    if (failReason.isNotEmpty) subtitleParts.add('原因: $failReason');
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 6),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(label,
+                  style: TextStyle(fontSize: 11, color: Colors.blue.shade800)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(period.isEmpty ? '（无期数）' : period,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                  if (subtitleParts.isNotEmpty)
+                    Text(subtitleParts.join('  '),
+                        style: TextStyle(fontSize: 12, color: statusColor)),
+                ],
+              ),
+            ),
+            Text(amount.isEmpty ? '' : '¥$amount',
+                style: TextStyle(fontSize: 14, color: Colors.orange.shade800)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 户信息卡：户号 / 户主 / 总人数 / 在世人数 / 当年补贴合计
+  Widget _buildHouseholdHeader() {
+    final huHao = _person?.huHao ?? '';
+    final total = _familyMembers.length;
+    final alive = _familyMembers.where((m) => !m.isDeceased).length;
+
+    String householderName = '';
+    for (final m in _familyMembers) {
+      final raw = _familyRaw[(m.idCard ?? '').toString()];
+      final relation = ((raw?['relation'] ?? m.relation) ?? '').toString();
+      if (relation.contains('户主')) {
+        householderName = m.name ?? '';
+        break;
+      }
+    }
+
+    double subsidyTotal = 0;
+    for (final raw in _familyRaw.values) {
+      final s = (raw['subsidy_amount'] ?? '')
+          .toString()
+          .replaceAll(',', '')
+          .trim();
+      final d = double.tryParse(s);
+      if (d != null) subsidyTotal += d;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.blue.shade100),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.home_outlined, size: 18, color: Colors.blue.shade700),
+              const SizedBox(width: 6),
+              Text(
+                '户号 ${huHao.isEmpty ? "未知" : huHao}',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue.shade900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 16,
+            runSpacing: 6,
+            children: [
+              _buildHouseholdStat(
+                  '户主', householderName.isEmpty ? '未标注' : householderName),
+              _buildHouseholdStat('总人数', '$total 人'),
+              _buildHouseholdStat('在世', '$alive 人'),
+              if (subsidyTotal > 0)
+                _buildHouseholdStat(
+                    '当年地力补贴', '¥${subsidyTotal.toStringAsFixed(2)}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHouseholdStat(String label, String value) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text('$label：',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: Colors.blue.shade900,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// 成员标签行：户主 / 死亡 / 迁出 / 低保 / 特困 / 残疾 / 计生 / 脱贫类型
+  Widget _buildMemberTags(Person m) {
+    final raw = _familyRaw[(m.idCard ?? '').toString()];
+    final tags = <Widget>[];
+
+    final relation = ((raw?['relation'] ?? m.relation) ?? '').toString();
+    if (relation.contains('户主')) tags.add(_memberTag('户主', Colors.blue));
+    if (m.isDeceased) {
+      tags.add(_memberTag('已死亡', Colors.red));
+    } else if ((m.isMigrated ?? '') == '是') {
+      tags.add(_memberTag('已迁出', Colors.orange));
+    }
+
+    if ((m.dibao ?? '') == '是') tags.add(_memberTag('低保', Colors.green));
+    if ((m.tekun ?? '') == '是') tags.add(_memberTag('特困', Colors.deepOrange));
+    if ((m.disability ?? '') == '是') tags.add(_memberTag('残疾', Colors.cyan));
+    if ((m.jisheng ?? '') == '是') tags.add(_memberTag('计生', Colors.teal));
+
+    final poorType = (m.poorType ?? '').toString();
+    if (poorType.isNotEmpty && poorType != '一般户') {
+      tags.add(_memberTag(poorType, Colors.brown));
+    }
+
+    if (tags.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Wrap(spacing: 4, runSpacing: 4, children: tags),
+    );
+  }
+
+  /// 成员当年补贴额 + 学生标记（服务端 /api/family 已带回，此前被模型丢弃）
+  Widget _buildMemberSubsidyLine(Person m) {
+    final raw = _familyRaw[(m.idCard ?? '').toString()];
+    final subsidy = (raw?['subsidy_amount'] ?? '').toString().trim();
+    final studentMark = (raw?['student_mark'] ?? '').toString().trim();
+    if (subsidy.isEmpty && studentMark.isEmpty) return const SizedBox.shrink();
+
+    final parts = <String>[
+      if (subsidy.isNotEmpty) '当年地力补贴 ¥$subsidy',
+      if (studentMark.isNotEmpty) studentMark,
+    ];
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(
+        parts.join('  ·  '),
+        style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+      ),
+    );
+  }
+
+  Widget _memberTag(String text, MaterialColor color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: color.shade100,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(text, style: TextStyle(fontSize: 11, color: color.shade800)),
+    );
+  }
+
   Widget _buildFamilyMembers() {
     return Scaffold(
       body: _familyMembers.isEmpty
@@ -412,9 +745,12 @@ class _PersonDetailPageState extends State<PersonDetailPage>
             )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: _familyMembers.length + 1,
+              itemCount: _familyMembers.length + 2,
               itemBuilder: (context, index) {
-                if (index == _familyMembers.length) {
+                if (index == 0) {
+                  return _buildHouseholdHeader();
+                }
+                if (index == _familyMembers.length + 1) {
                   
                   return Padding(
                     padding: const EdgeInsets.only(top: 8),
@@ -429,7 +765,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                   );
                 }
                 
-                final member = _familyMembers[index];
+                final member = _familyMembers[index - 1];
                 
                 return Dismissible(
                   key: Key(member.id ?? member.idCard ?? index.toString()),
@@ -493,8 +829,11 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('身份证: ${member.idCard ?? "未知"}'),
-                          if (member.relation != null)
+                          if (member.relation != null &&
+                              member.relation!.isNotEmpty)
                             Text('关系: ${member.relation}'),
+                          _buildMemberTags(member),
+                          _buildMemberSubsidyLine(member),
                         ],
                       ),
                       trailing: Row(

@@ -167,6 +167,60 @@ class PersonApi {
       throw Exception('获取家庭成员失败: $e');
     }
   }
+
+  /// 按人聚合 6 类补贴发放记录（低保 / 高龄 / 地力 / 残疾护理 / 养老 / 特困）
+  ///
+  /// 服务端 `/api/person/<idCard>/subsidies` 返回：
+  /// `{id_card, person_name, total_count, truncated, by_module[], records[]}`
+  static Future<Map<String, dynamic>> getPersonSubsidies(String idCard) async {
+    try {
+      final response = await _dio.get('/api/person/$idCard/subsidies');
+
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data as Map);
+      } else {
+        throw Exception('获取补贴发放记录失败: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('获取补贴发放记录失败: $e');
+    }
+  }
+
+  /// 家庭成员原始数据（保留服务端额外字段：subsidy_amount / student_mark）
+  ///
+  /// 与 [getFamilyMembers] 同一接口，但返回原始 Map，供"按户一档"展示使用。
+  static Future<List<Map<String, dynamic>>> getFamilyMembersRaw(
+      String huHao) async {
+    try {
+      final response = await _dio.get('/api/family/$huHao');
+
+      if (response.statusCode == 200) {
+        final List<dynamic> data = response.data['members'] ?? [];
+        return data
+            .map((json) => Map<String, dynamic>.from(json as Map))
+            .toList();
+      } else {
+        throw Exception('获取家庭成员失败: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('获取家庭成员失败: $e');
+    }
+  }
+
+  /// 待核销清单：已标记死亡/迁出、但名下仍挂着补贴发放记录的人员
+  static Future<Map<String, dynamic>> getPendingCorrection() async {
+    try {
+      final response = await _dio.get('/api/persons/pending-correction');
+
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data as Map);
+      } else {
+        throw Exception('获取待核销清单失败: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('获取待核销清单失败: $e');
+    }
+  }
   
   
   static Future<bool> updatePerson(String idCard, Map<String, dynamic> data) async {
