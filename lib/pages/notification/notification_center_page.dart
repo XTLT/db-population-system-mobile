@@ -58,41 +58,48 @@ class _NotificationCenterPageState extends State<NotificationCenterPage> {
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '类型：${notification.getNotificationTypeText()}',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
-            ),
-            if (notification.senderName.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                '发送者：${notification.senderName}',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '类型：${notification.getNotificationTypeText()}',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            ],
-            const SizedBox(height: 8),
-            Text(
-              '时间：${notification.createdAt}',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+                if (notification.senderName.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '发送者：${notification.senderName}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  '时间：${notification.createdAt}',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const Divider(height: 24),
+                SelectableText(
+                  notification.content,
+                  style: const TextStyle(fontSize: 16),
+                ),
+              ],
             ),
-            const Divider(height: 24),
-            Text(
-              notification.content,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
