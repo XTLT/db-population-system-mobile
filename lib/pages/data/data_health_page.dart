@@ -314,15 +314,18 @@ class _DataHealthPageState extends State<DataHealthPage> {
               child: const Text('补录'),
             )
           : const Icon(Icons.chevron_right, size: 18),
-      onTap: () {
+      onTap: () async {
         final target = idCard.isNotEmpty ? idCard : personId;
         if (target.isEmpty) return;
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => PersonDetailPage(idCard: target),
           ),
         );
+        // 详情页可能改过户主/电话等，返回后必须重新体检，否则清单停在旧数据
+        if (!mounted) return;
+        await _loadData(silent: true);
       },
     );
   }
