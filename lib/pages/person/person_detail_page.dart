@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/person.dart';
 import '../../api/person_api.dart';
 import 'person_edit_page.dart';
@@ -272,7 +273,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
           ]),
 
           _buildInfoSection('联系信息', [
-            _buildInfoItem('电话', person.phone, copyable: true),
+            _buildInfoItem('电话', person.phone, copyable: true, dialable: true),
             _buildInfoItem('地址', person.address),
             if (person.groupName != null && person.groupName!.isNotEmpty)
               _buildInfoItem('小组', person.groupName),
@@ -306,7 +307,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
               _buildInfoItem('年级', _gradeDisplay(person.education?.grade ?? '')),
               _buildInfoItem('班级', person.education?.className ?? ''),
               _buildInfoItem('监护人', person.education?.guardian ?? ''),
-              _buildInfoItem('监护人电话', person.education?.guardianPhone ?? '', copyable: true),
+              _buildInfoItem('监护人电话', person.education?.guardianPhone ?? '', copyable: true, dialable: true),
               _buildInfoItem('是否留守儿童', person.education?.isLeftBehind ?? ''),
               _buildInfoItem('学生状态', person.education?.studentStatus ?? ''),
               _buildInfoItem('入学日期', person.education?.enrollmentDate ?? ''),
@@ -365,8 +366,75 @@ class _PersonDetailPageState extends State<PersonDetailPage>
     );
   }
   
-  Widget _buildInfoItem(String label, String? value, {bool copyable = false}) {
+  /// 一键拨号：优先呼出拨号盘，失败时复制号码并提示
+  Future<void> _dialPhone(String phone) async {
+    final number = phone.replaceAll(RegExp(r'\s'), '');
+    final uri = Uri(scheme: 'tel', path: number);
+    bool launched = false;
+    try {
+      launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      launched = false;
+    }
+    if (!launched && mounted) {
+      await Clipboard.setData(ClipboardData(text: number));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('设备无法拨号，已复制号码: $number'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Widget _buildInfoItem(
+    String label,
+    String? value, {
+    bool copyable = false,
+    bool dialable = false,
+  }) {
     if (value == null || value.isEmpty) return const SizedBox();
+
+    final valueText = Text(value, style: const TextStyle(fontSize: 14));
+
+    Widget valueWidget;
+    if (dialable) {
+      valueWidget = InkWell(
+        onTap: () => _dialPhone(value),
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: value));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已复制: $value'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
+        child: Row(
+          children: [
+            Flexible(child: valueText),
+            const SizedBox(width: 6),
+            Icon(Icons.phone_in_talk, size: 16, color: Colors.blue.shade600),
+          ],
+        ),
+      );
+    } else if (copyable) {
+      valueWidget = GestureDetector(
+        onLongPress: () {
+          Clipboard.setData(ClipboardData(text: value));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('已复制: $value'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        },
+        child: valueText,
+      );
+    } else {
+      valueWidget = valueText;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -383,28 +451,7 @@ class _PersonDetailPageState extends State<PersonDetailPage>
               ),
             ),
           ),
-          Expanded(
-            child: copyable
-                ? GestureDetector(
-                    onLongPress: () {
-                      Clipboard.setData(ClipboardData(text: value));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('已复制: $value'),
-                          duration: const Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                    child: Text(
-                      value,
-                      style: const TextStyle(fontSize: 14),
-                    ),
-                  )
-                : Text(
-                    value,
-                    style: const TextStyle(fontSize: 14),
-                  ),
-          ),
+          Expanded(child: valueWidget),
         ],
       ),
     );

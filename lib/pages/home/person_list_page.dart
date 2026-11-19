@@ -6,6 +6,7 @@ import '../../services/offline_data_service.dart';
 import '../person/person_detail_page.dart';
 import '../search/advanced_search_page.dart';
 import '../correction/pending_correction_page.dart';
+import '../data/data_health_page.dart';
 
 class PersonListPage extends StatefulWidget {
   const PersonListPage({super.key});
@@ -316,21 +317,47 @@ class _PersonListPageState extends State<PersonListPage> {
   }
   
   Future<void> _search() async {
-    if (_searchController.text.trim().isEmpty) {
+    final raw = _searchController.text.trim();
+    if (raw.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('请输入姓名进行查询')),
+        const SnackBar(content: Text('请输入姓名、身份证号、户号或电话')),
       );
       return;
     }
-    
+
+    // 粘贴来的号码常带空格，先清掉再判断类型
+    final input = raw.replaceAll(RegExp(r'\s'), '');
+
+    final isIdCard = RegExp(r'^[0-9]{17}[0-9Xx]$').hasMatch(input) ||
+        RegExp(r'^[0-9]{15}$').hasMatch(input);
+    final isPhone = RegExp(r'^1[3-9][0-9]{9}$').hasMatch(input);
+    final isNumeric = RegExp(r'^[0-9]{1,20}$').hasMatch(input);
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
       _persons = [];
     });
-    
+
     try {
-      final results = await PersonApi.searchByName(_searchController.text.trim());
+      List<Person> results;
+
+      if (isIdCard) {
+        results = await PersonApi.searchAdvanced(
+          idCard: input.toUpperCase(),
+          limit: 100,
+        );
+      } else if (isPhone) {
+        results = await PersonApi.searchAdvanced(phone: input, limit: 100);
+      } else if (isNumeric) {
+        results = await PersonApi.searchAdvanced(huHao: input, limit: 100);
+        // 户号查不到时回退按姓名，避免纯数字姓名或未按户号登记的人查不到
+        if (results.isEmpty) {
+          results = await PersonApi.searchByName(raw);
+        }
+      } else {
+        results = await PersonApi.searchByName(raw);
+      }
       
       setState(() {
         _persons = results;
@@ -406,6 +433,19 @@ class _PersonListPageState extends State<PersonListPage> {
         actions: [
           if (!_isSelectionMode)
             IconButton(
+              icon: const Icon(Icons.health_and_safety),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const DataHealthPage(),
+                  ),
+                );
+              },
+              tooltip: '数据体检',
+            ),
+          if (!_isSelectionMode)
+            IconButton(
               icon: const Icon(Icons.fact_check),
               onPressed: () {
                 Navigator.push(
@@ -444,8 +484,8 @@ class _PersonListPageState extends State<PersonListPage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                labelText: '姓名查询',
-                hintText: '请输入姓名',
+                labelText: '查人',
+                hintText: '姓名 / 身份证 / 户号 / 电话',
                 prefixIcon: const Icon(Icons.search),
                 border: const OutlineInputBorder(),
                 suffixIcon: IconButton(

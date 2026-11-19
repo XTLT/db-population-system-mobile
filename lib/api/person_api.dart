@@ -35,6 +35,7 @@ class PersonApi {
     String? name,
     String? idCard,
     String? huHao,
+    String? phone,
     String? address,
     int? ageMin,
     int? ageMax,
@@ -53,6 +54,7 @@ class PersonApi {
         if (name != null && name.isNotEmpty) 'name': name,
         if (idCard != null && idCard.isNotEmpty) 'id_card': idCard,
         if (huHao != null && huHao.isNotEmpty) 'hu_hao': huHao,
+        if (phone != null && phone.isNotEmpty) 'phone': phone,
         if (address != null && address.isNotEmpty) 'address': address,
         if (ageMin != null) 'age_min': ageMin,
         if (ageMax != null) 'age_max': ageMax,
@@ -219,6 +221,21 @@ class PersonApi {
       }
     } catch (e) {
       throw Exception('获取待核销清单失败: $e');
+    }
+  }
+
+  /// 村级数据体检：按常见数据质量问题分组返回待补录人员
+  static Future<Map<String, dynamic>> getDataHealth() async {
+    try {
+      final response = await _dio.get('/api/persons/data-health');
+
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data as Map);
+      } else {
+        throw Exception('获取数据体检结果失败: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('获取数据体检结果失败: $e');
     }
   }
   
