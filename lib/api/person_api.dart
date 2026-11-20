@@ -13,6 +13,17 @@ class OfflineQueueException implements Exception {
   String toString() => message;
 }
 
+/// 服务端 409：记录在离线期间被其他人改过。
+/// 必须单独成类，同步层才能把"冲突"和"普通失败"分开处理——
+/// 冲突不能重试，只能让用户人工选择保留哪一边。
+class PersonConflictException implements Exception {
+  final String message;
+  PersonConflictException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class PersonApi {
   static final _dio = ApiClient().dio;
   
@@ -279,7 +290,15 @@ class PersonApi {
   /// 把 DioException 分成两类：
   /// - 网络层失败 → [OfflineQueueException]，页面据此转存离线队列；
   /// - 服务端有响应（400 校验、401、500 等）→ 普通异常，直接提示，不入队。
-  static Exception _mapPersonWriteError(DioException e, String action) {
+  static Object _mapPersonWriteError(DioException e, String action) {
+    if (e.response?.statusCode == 409) {
+      final data = e.response?.data;
+      final message = (data is Map && data['message'] != null)
+          ? data['message'].toString()
+          : '服务器记录已被其他人修改';
+      return PersonConflictException(message);
+    }
+
     final typeName = e.type.name;
     final isNetworkFailure = e.response == null &&
         typeName != 'badCertificate' &&

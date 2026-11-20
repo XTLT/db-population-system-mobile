@@ -1,9 +1,28 @@
 
+import 'package:dio/dio.dart';
 import '../models/student.dart';
 import 'api_client.dart';
+import 'person_api.dart' show OfflineQueueException;
 
 class StudentApi {
   static final _dio = ApiClient().dio;
+
+  /// 与 PersonApi 同口径：网络层失败抛 [OfflineQueueException]，
+  /// 页面据此把表单转入离线队列；服务端有响应则照常抛普通异常。
+  static Object _mapWriteError(DioException e, String action) {
+    final typeName = e.type.name;
+    final isNetworkFailure = e.response == null &&
+        typeName != 'badCertificate' &&
+        typeName != 'cancel';
+    if (isNetworkFailure) {
+      return OfflineQueueException('网络不可用');
+    }
+    final data = e.response?.data;
+    if (data is Map && data['error'] != null) {
+      return Exception(data['error'].toString());
+    }
+    return Exception('$action：服务器返回 ${e.response?.statusCode ?? typeName}');
+  }
   
   
   static Future<List<Student>> searchStudents(String name) async {
@@ -47,6 +66,8 @@ class StudentApi {
     try {
       final response = await _dio.put('/api/student/$idCard', data: data);
       return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      throw _mapWriteError(e, '更新失败');
     } catch (e) {
       throw Exception('更新失败: $e');
     }
@@ -72,6 +93,8 @@ class StudentApi {
     try {
       final response = await _dio.post('/api/student', data: data);
       return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      throw _mapWriteError(e, '添加失败');
     } catch (e) {
       throw Exception('添加失败: $e');
     }

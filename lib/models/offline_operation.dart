@@ -27,6 +27,15 @@ class OfflineOperation {
   final String? conflictReason;
   final int retryCount;
 
+  /// 离线编辑开始时的服务端基线版本（Person.updated_at）。
+  /// 同步时回传给服务端，由 `PUT /api/person/<id>` 做 409 冲突判定。
+  /// 为空表示没有基线（如新增人员、或列表接口未带 updated_at），服务端会跳过检测。
+  final String? baseUpdatedAt;
+
+  /// 连续失败后的下一次可重试时间，未到期时 syncAll 会跳过，
+  /// 避免每次联网都把同一批失败项重新打一遍。
+  final DateTime? nextRetryAt;
+
   OfflineOperation({
     required this.id,
     required this.type,
@@ -38,6 +47,8 @@ class OfflineOperation {
     this.syncedAt,
     this.conflictReason,
     this.retryCount = 0,
+    this.baseUpdatedAt,
+    this.nextRetryAt,
   });
 
   Map<String, dynamic> toJson() => {
@@ -51,6 +62,8 @@ class OfflineOperation {
         'synced_at': syncedAt?.toIso8601String(),
         'conflict_reason': conflictReason,
         'retry_count': retryCount,
+        'base_updated_at': baseUpdatedAt,
+        'next_retry_at': nextRetryAt?.toIso8601String(),
       };
 
   factory OfflineOperation.fromJson(Map<String, dynamic> json) =>
@@ -76,6 +89,10 @@ class OfflineOperation {
             : null,
         conflictReason: json['conflict_reason'],
         retryCount: json['retry_count'] ?? 0,
+        baseUpdatedAt: json['base_updated_at'] as String?,
+        nextRetryAt: json['next_retry_at'] != null
+            ? DateTime.parse(json['next_retry_at'])
+            : null,
       );
 
   OfflineOperation copyWith({
@@ -89,6 +106,10 @@ class OfflineOperation {
     DateTime? syncedAt,
     String? conflictReason,
     int? retryCount,
+    String? baseUpdatedAt,
+    DateTime? nextRetryAt,
+    bool clearNextRetryAt = false,
+    bool clearConflictReason = false,
   }) {
     return OfflineOperation(
       id: id ?? this.id,
@@ -99,8 +120,13 @@ class OfflineOperation {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       syncedAt: syncedAt ?? this.syncedAt,
-      conflictReason: conflictReason ?? this.conflictReason,
+      conflictReason: clearConflictReason
+          ? null
+          : (conflictReason ?? this.conflictReason),
       retryCount: retryCount ?? this.retryCount,
+      baseUpdatedAt: baseUpdatedAt ?? this.baseUpdatedAt,
+      nextRetryAt:
+          clearNextRetryAt ? null : (nextRetryAt ?? this.nextRetryAt),
     );
   }
 }

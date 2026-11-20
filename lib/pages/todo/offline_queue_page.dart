@@ -240,8 +240,9 @@ class _OfflineQueuePageState extends State<OfflineQueuePage> {
 
   Widget _buildTile(OfflineOperation op) {
     final isCreate = op.type == OperationType.create;
+    final isStudent = op.entityType == 'student';
     final name = (op.data['name'] ?? '').toString().trim();
-    final title = '${isCreate ? '新增' : '修改'}人员 · '
+    final title = '${isCreate ? '新增' : '修改'}${isStudent ? '学生' : '人员'} · '
         '${name.isEmpty ? op.entityId : name}';
     final statusColor = _statusColor(op.status);
 
@@ -250,7 +251,9 @@ class _OfflineQueuePageState extends State<OfflineQueuePage> {
         leading: CircleAvatar(
           backgroundColor: statusColor.withValues(alpha: 0.12),
           child: Icon(
-            isCreate ? Icons.person_add : Icons.edit,
+            isStudent
+                ? Icons.school_outlined
+                : (isCreate ? Icons.person_add : Icons.edit),
             color: statusColor,
           ),
         ),
@@ -279,6 +282,13 @@ class _OfflineQueuePageState extends State<OfflineQueuePage> {
               Text(
                 op.conflictReason!,
                 style: TextStyle(fontSize: 12, color: Colors.red.shade700),
+              ),
+            if (op.nextRetryAt != null &&
+                op.status == SyncStatus.failed &&
+                op.nextRetryAt!.isAfter(DateTime.now()))
+              Text(
+                '下次自动重试 ${_formatTime(op.nextRetryAt!)}',
+                style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
               ),
           ],
         ),

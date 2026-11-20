@@ -21,6 +21,8 @@ class SyncProvider with ChangeNotifier {
   String? _lastSyncTime;
 
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
+  Timer? _queueDebounce;
+  bool _queueListenerAttached = false;
 
   SyncState get state => _state;
   int get pendingCount => _pendingCount;
@@ -33,8 +35,27 @@ class SyncProvider with ChangeNotifier {
 
   
   Future<void> init() async {
+    // 一次性清掉旧版本遗留的已同步项（新版同步成功即出队）
+    await OfflineDataService().pruneSyncedOperations();
     await loadStatus();
+    _listenToQueueChanges();
     _listenToConnectivity();
+  }
+
+  /// 队列一有变化（离线入队、删除草稿、同步状态流转）就刷新计数，
+  /// 首页角标不再依赖页面"碰巧"调 loadStatus。
+  void _listenToQueueChanges() {
+    if (_queueListenerAttached) return;
+    OfflineDataService().revision.addListener(_onQueueChanged);
+    _queueListenerAttached = true;
+  }
+
+  void _onQueueChanged() {
+    // 同步过程中会连续改多次状态，合并成一次刷新
+    _queueDebounce?.cancel();
+    _queueDebounce = Timer(const Duration(milliseconds: 200), () {
+      loadStatus();
+    });
   }
 
   
@@ -110,6 +131,11 @@ class SyncProvider with ChangeNotifier {
 
   @override
   void dispose() {
+    _queueDebounce?.cancel();
+    if (_queueListenerAttached) {
+      OfflineDataService().revision.removeListener(_onQueueChanged);
+      _queueListenerAttached = false;
+    }
     _connectivitySubscription?.cancel();
     super.dispose();
   }

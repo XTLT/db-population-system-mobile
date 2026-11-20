@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/student.dart';
 import '../../api/student_api.dart';
+import '../../api/person_api.dart' show OfflineQueueException;
 import '../../services/connectivity_service.dart';
 import '../../services/offline_data_service.dart';
 import '../../utils/validators.dart';
@@ -93,25 +94,29 @@ class _StudentEditPageState extends State<StudentEditPage> {
       _isLoading = true;
     });
 
-    try {
-      final data = {
-        'id_card': _idCardController.text.trim(),
-        'school_name': _schoolNameController.text.trim(),
-        'grade': _grade,
-        'class_name': _classNameController.text.trim(),
-        'guardian': _guardianController.text.trim(),
-        'guardian_phone': _guardianPhoneController.text.trim(),
-        'is_left_behind': _isLeftBehind,
-        'student_status': _studentStatus,
-        'enrollment_date': _enrollmentDateController.text.trim(),
-      };
+    // payload 提到 try 之外：网络失败转离线队列时还要用它
+    final data = {
+      'id_card': _idCardController.text.trim(),
+      'school_name': _schoolNameController.text.trim(),
+      'grade': _grade,
+      'class_name': _classNameController.text.trim(),
+      'guardian': _guardianController.text.trim(),
+      'guardian_phone': _guardianPhoneController.text.trim(),
+      'is_left_behind': _isLeftBehind,
+      'student_status': _studentStatus,
+      'enrollment_date': _enrollmentDateController.text.trim(),
+    };
 
+    try {
       
       final isConnected = await ConnectivityService().isConnected();
 
       if (!isConnected) {
         
-        await OfflineDataService().saveStudentOffline(data);
+        await OfflineDataService().saveStudentOffline(
+          data,
+          isCreate: false,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -147,6 +152,22 @@ class _StudentEditPageState extends State<StudentEditPage> {
             const SnackBar(content: Text('保存失败')),
           );
         }
+      }
+    } on OfflineQueueException {
+      // 在线但服务器不可达/超时：和人员编辑页同口径，转离线队列，不白填
+      await OfflineDataService().saveStudentOffline(
+        data,
+        isCreate: false,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('网络异常，已保存到离线队列，联网后自动提交'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {

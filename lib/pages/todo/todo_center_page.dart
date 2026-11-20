@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../api/notification_api.dart';
 import '../../api/person_api.dart';
 import '../../providers/sync_provider.dart';
+import '../../services/offline_data_service.dart';
 import '../../utils/todo_summary.dart';
 import '../correction/pending_correction_page.dart';
 import '../data/data_health_page.dart';
@@ -33,10 +34,105 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
   AgeTodoSummary _age = const AgeTodoSummary();
   DateTime? _lastUpdated;
 
+  // 上一次成功拉取的快照：断网时先顶上，避免整页全是"—"
+  bool _usingCache = false;
+  DateTime? _cacheTime;
+  HealthTodoSummary? _cachedHealth;
+  int? _cachedCorrectionTotal;
+  AgeTodoSummary? _cachedAge;
+
+  static const String _snapshotKey = 'todo_snapshot';
+
   @override
   void initState() {
     super.initState();
-    _load();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await _restoreSnapshot();
+    if (!mounted) return;
+    await _load();
+  }
+
+  Future<void> _restoreSnapshot() async {
+    try {
+      final snap = await OfflineDataService().getData(_snapshotKey);
+      if (snap == null) return;
+
+      final health = snap['health'];
+      if (health is Map) {
+        _cachedHealth = HealthTodoSummary(
+          issueCount: (health['issue_count'] as num?)?.toInt() ?? 0,
+          issuePersons: (health['issue_persons'] as num?)?.toInt() ?? 0,
+          topItems: (health['top_items'] ?? '').toString(),
+        );
+      }
+      _cachedCorrectionTotal =
+          (snap['correction_total'] as num?)?.toInt();
+
+      final age = snap['age'];
+      if (age is Map) {
+        _cachedAge = AgeTodoSummary(
+          persons: (age['persons'] as num?)?.toInt() ?? 0,
+          unread: (age['unread'] as num?)?.toInt() ?? 0,
+          monthLabel: (age['month_label'] ?? '').toString(),
+        );
+      }
+
+      _cacheTime = DateTime.tryParse((snap['saved_at'] ?? '').toString());
+
+      if (!mounted) return;
+      setState(() {
+        if (_cachedHealth != null) {
+          _health = _cachedHealth!;
+          _healthError = false;
+        }
+        if (_cachedCorrectionTotal != null) {
+          _correctionTotal = _cachedCorrectionTotal!;
+          _correctionError = false;
+        }
+        if (_cachedAge != null) {
+          _age = _cachedAge!;
+          _ageError = false;
+        }
+        _usingCache = _cachedHealth != null ||
+            _cachedCorrectionTotal != null ||
+            _cachedAge != null;
+        _loading = false;
+      });
+    } catch (e) {
+      debugPrint('恢复待办快照失败: $e');
+    }
+  }
+
+  Future<void> _saveSnapshot() async {
+    try {
+      final old = await OfflineDataService().getData(_snapshotKey) ?? {};
+      final merged = <String, dynamic>{...old};
+
+      if (!_healthError) {
+        merged['health'] = {
+          'issue_count': _health.issueCount,
+          'issue_persons': _health.issuePersons,
+          'top_items': _health.topItems,
+        };
+      }
+      if (!_correctionError) {
+        merged['correction_total'] = _correctionTotal;
+      }
+      if (!_ageError) {
+        merged['age'] = {
+          'persons': _age.persons,
+          'unread': _age.unread,
+          'month_label': _age.monthLabel,
+        };
+      }
+      merged['saved_at'] = DateTime.now().toIso8601String();
+      await OfflineDataService().saveData(_snapshotKey, merged);
+    } catch (e) {
+      debugPrint('保存待办快照失败: $e');
+    }
   }
 
   Future<void> _load() async {
@@ -54,8 +150,13 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _lastUpdated = DateTime.now();
+        // 三项都拿到新数据才算"已更新"；有任何一项失败就保留缓存时间，别假装新
+        if (!_healthError && !_correctionError && !_ageError) {
+          _lastUpdated = DateTime.now();
+          _usingCache = false;
+        }
       });
+      await _saveSnapshot();
     } finally {
       _inFlight = false;
     }
@@ -71,7 +172,15 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _healthError = true);
+      setState(() {
+        if (_cachedHealth != null) {
+          _health = _cachedHealth!;
+          _healthError = false;
+          _usingCache = true;
+        } else {
+          _healthError = true;
+        }
+      });
     }
   }
 
@@ -85,7 +194,15 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _correctionError = true);
+      setState(() {
+        if (_cachedCorrectionTotal != null) {
+          _correctionTotal = _cachedCorrectionTotal!;
+          _correctionError = false;
+          _usingCache = true;
+        } else {
+          _correctionError = true;
+        }
+      });
     }
   }
 
@@ -99,7 +216,15 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() => _ageError = true);
+      setState(() {
+        if (_cachedAge != null) {
+          _age = _cachedAge!;
+          _ageError = false;
+          _usingCache = true;
+        } else {
+          _ageError = true;
+        }
+      });
     }
   }
 
@@ -230,7 +355,18 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
                     color: Colors.blueGrey.shade800,
                   ),
                 ),
-                if (_lastUpdated != null) ...[
+                if (_usingCache) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    _cacheTime != null
+                        ? '离线缓存 · ${_formatClock(_cacheTime!)}'
+                        : '离线缓存 · 时间未知',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ] else if (_lastUpdated != null) ...[
                   const SizedBox(height: 2),
                   Text(
                     '更新于 ${_formatClock(_lastUpdated!)}',

@@ -13,6 +13,14 @@ class OfflineDataService {
   static const String _lastSyncTimeKey = 'last_sync_time';
   static const String _operationsKey = 'offline_operations';
   static const String _conflictsKey = 'offline_conflicts';
+
+  /// 队列内容变化通知。每次入队/删除/状态变更都会自增，
+  /// SyncProvider 订阅它来刷新首页角标，不再依赖"谁碰巧调了 loadStatus"。
+  final ValueNotifier<int> revision = ValueNotifier<int>(0);
+
+  void _notifyChanged() {
+    revision.value = revision.value + 1;
+  }
   
   
   Future<void> saveData(String key, dynamic data) async {
@@ -175,6 +183,7 @@ class OfflineDataService {
         _operationsKey,
         jsonEncode(operations.map((op) => op.toJson()).toList()),
       );
+      _notifyChanged();
     } catch (e) {
       debugPrint('OfflineDataService.queueOperation error: $e');
     }
@@ -219,6 +228,7 @@ class OfflineDataService {
           _operationsKey,
           jsonEncode(operations.map((op) => op.toJson()).toList()),
         );
+        _notifyChanged();
       }
     } catch (e) {
       debugPrint('OfflineDataService.updateOperationStatus error: $e');
@@ -226,7 +236,10 @@ class OfflineDataService {
   }
 
   
-  Future<void> incrementRetryCount(String operationId) async {
+  Future<void> incrementRetryCount(
+    String operationId, {
+    DateTime? nextRetryAt,
+  }) async {
     try {
       final operations = await getPendingOperations();
       final index = operations.indexWhere((op) => op.id == operationId);
@@ -235,6 +248,7 @@ class OfflineDataService {
         operations[index] = operations[index].copyWith(
           retryCount: operations[index].retryCount + 1,
           status: SyncStatus.pending,
+          nextRetryAt: nextRetryAt,
         );
 
         final prefs = await SharedPreferences.getInstance();
@@ -242,6 +256,7 @@ class OfflineDataService {
           _operationsKey,
           jsonEncode(operations.map((op) => op.toJson()).toList()),
         );
+        _notifyChanged();
       }
     } catch (e) {
       debugPrint('OfflineDataService.incrementRetryCount error: $e');
@@ -272,8 +287,33 @@ class OfflineDataService {
       if (!stillCached && removed.entityId.isNotEmpty) {
         await removeData('${removed.entityType}_${removed.entityId}');
       }
+      _notifyChanged();
     } catch (e) {
       debugPrint('OfflineDataService.removeOperation error: $e');
+    }
+  }
+
+  /// 清理历史遗留的已同步项。
+  ///
+  /// 旧版本同步成功后只改状态、从不出队，单 key 里的 JSON 会越滚越大；
+  /// 新版同步成功即出队，此方法用于一次性收敛老数据。
+  Future<int> pruneSyncedOperations() async {
+    try {
+      final operations = await getPendingOperations();
+      final before = operations.length;
+      operations.removeWhere((op) => op.status == SyncStatus.synced);
+      if (operations.length == before) return 0;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _operationsKey,
+        jsonEncode(operations.map((op) => op.toJson()).toList()),
+      );
+      _notifyChanged();
+      return before - operations.length;
+    } catch (e) {
+      debugPrint('OfflineDataService.pruneSyncedOperations error: $e');
+      return 0;
     }
   }
 
@@ -302,6 +342,7 @@ class OfflineDataService {
         SyncStatus.conflict,
         conflictReason: '数据冲突：服务器数据已更新',
       );
+      _notifyChanged();
     } catch (e) {
       debugPrint('OfflineDataService.saveConflict error: $e');
     }
@@ -346,6 +387,7 @@ class OfflineDataService {
         
         await updateOperationStatus(operationId, SyncStatus.pending);
       }
+      _notifyChanged();
     } catch (e) {
       debugPrint('OfflineDataService.resolveConflict error: $e');
     }
@@ -368,9 +410,13 @@ class OfflineDataService {
   ///
   /// 必须显式传入 [isCreate]：data 里始终带 id_card，若用 id_card 是否为空判断，
   /// 新增人员会被误记为 update，同步时 PUT 到不存在的人，重试 3 次后永久失败。
+  ///
+  /// [baseUpdatedAt] 是进入编辑页时服务端记录的 `updated_at`。同步时回传，
+  /// 服务端据此判断"离线期间有没有别人改过这条记录"。
   Future<void> savePersonOffline(
     Map<String, dynamic> personData, {
     required bool isCreate,
+    String? baseUpdatedAt,
   }) async {
     final operation = OfflineOperation(
       id: generateId(),
@@ -379,13 +425,14 @@ class OfflineDataService {
       entityId: personData['id_card'] ?? '',
       data: personData,
       createdAt: DateTime.now(),
+      baseUpdatedAt: baseUpdatedAt,
     );
 
     await queueOperation(operation);
     await saveData('person_${personData['id_card']}', personData);
   }
 
-  /// 手动重试：把失败项复位为待同步，并清零重试次数。
+  /// 手动重试：把失败项复位为待同步，清零重试次数与退避时间。
   Future<void> resetOperationForRetry(String operationId) async {
     try {
       final operations = await getPendingOperations();
@@ -397,6 +444,7 @@ class OfflineDataService {
         retryCount: 0,
         // 清掉上一次的失败原因，避免重试成功后仍显示旧错误
         conflictReason: '',
+        clearNextRetryAt: true,
       );
 
       final prefs = await SharedPreferences.getInstance();
@@ -404,23 +452,26 @@ class OfflineDataService {
         _operationsKey,
         jsonEncode(operations.map((op) => op.toJson()).toList()),
       );
+      _notifyChanged();
     } catch (e) {
       debugPrint('OfflineDataService.resetOperationForRetry error: $e');
     }
   }
 
   
-  Future<void> saveStudentOffline(Map<String, dynamic> studentData) async {
+  Future<void> saveStudentOffline(
+    Map<String, dynamic> studentData, {
+    required bool isCreate,
+    String? baseUpdatedAt,
+  }) async {
     final operation = OfflineOperation(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      // BUG-04：Student 模型只有 id_card 字段（无 id），必须用 id_card 判断 create/update
-      type: studentData['id_card'] == null
-          ? OperationType.create
-          : OperationType.update,
+      id: generateId(),
+      type: isCreate ? OperationType.create : OperationType.update,
       entityType: 'student',
       entityId: studentData['id_card'] ?? '',
       data: studentData,
       createdAt: DateTime.now(),
+      baseUpdatedAt: baseUpdatedAt,
     );
 
     await queueOperation(operation);

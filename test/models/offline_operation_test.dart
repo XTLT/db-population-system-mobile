@@ -155,5 +155,30 @@ void main() {
       expect(op.type, OperationType.update); // 未知 type → update
       expect(op.status, SyncStatus.pending); // 缺省 status → pending
     });
+
+    test('冲突基线与退避时间可往返', () {
+      final op = buildOp().copyWith(
+        baseUpdatedAt: '2026-11-20 09:00:00',
+        nextRetryAt: DateTime.utc(2026, 11, 20, 9, 30),
+      );
+      final back = OfflineOperation.fromJson(op.toJson());
+
+      expect(back.baseUpdatedAt, '2026-11-20 09:00:00');
+      expect(back.nextRetryAt, DateTime.utc(2026, 11, 20, 9, 30));
+    });
+
+    test('清空退避时间与失败原因', () {
+      final op = buildOp().copyWith(
+        nextRetryAt: DateTime.utc(2026, 11, 20, 9, 30),
+        conflictReason: '超时',
+      );
+      final reset = op.copyWith(
+        clearNextRetryAt: true,
+        clearConflictReason: true,
+      );
+
+      expect(reset.nextRetryAt, isNull);
+      expect(reset.conflictReason, isNull);
+    });
   });
 }

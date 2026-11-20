@@ -91,6 +91,10 @@ class Person {
   final String? commercialForestChangeTime;
   final Education? education;
 
+  /// 服务端记录的最后修改时间。离线编辑时作为冲突检测基线，
+  /// 同步时随 payload 回传，服务端据此判断期间是否被别人改过。
+  final String? updatedAt;
+
   Person({
     this.id,
     this.idCard,
@@ -129,6 +133,7 @@ class Person {
     this.commercialForestChangeReason,
     this.commercialForestChangeTime,
     this.education,
+    this.updatedAt,
   });
 
   factory Person.fromJson(Map<String, dynamic> json) {
@@ -169,6 +174,7 @@ class Person {
       commercialForestArea: json['commercial_forest_area'],
       commercialForestChangeReason: json['commercial_forest_change_reason'],
       commercialForestChangeTime: json['commercial_forest_change_time'],
+      updatedAt: json['updated_at']?.toString(),
       education: json['education'] != null
           ? Education.fromJson(json['education'])
           : null,
@@ -213,6 +219,7 @@ class Person {
       'commercial_forest_area': commercialForestArea,
       'commercial_forest_change_reason': commercialForestChangeReason,
       'commercial_forest_change_time': commercialForestChangeTime,
+      'updated_at': updatedAt,
       'education': education?.toJson(),
     };
   }

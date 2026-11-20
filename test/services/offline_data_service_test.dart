@@ -86,16 +86,19 @@ void main() {
     final svc = OfflineDataService();
 
     test('有 id_card 应走 update 分支，entityId 与缓存 key 均用 id_card', () async {
-      await svc.saveStudentOffline({
-        'id_card': 'S110101201001011234',
-        'name': '学生甲',
-        'grade': 'G5',
-      });
+      await svc.saveStudentOffline(
+        {
+          'id_card': 'S110101201001011234',
+          'name': '学生甲',
+          'grade': 'G5',
+        },
+        isCreate: false,
+      );
 
       final ops = await svc.getPendingOperations();
       expect(ops.length, 1);
       final op = ops.first;
-      expect(op.type, OperationType.update); // 有 id_card → update
+      expect(op.type, OperationType.update); // 编辑已有学生 → update
       expect(op.entityType, 'student');
       expect(op.entityId, 'S110101201001011234');
 
@@ -106,15 +109,18 @@ void main() {
     });
 
     test('无 id_card 应走 create 分支，entityId 为空串', () async {
-      await svc.saveStudentOffline({
-        'name': '新生乙',
-        'grade': 'G1',
-      });
+      await svc.saveStudentOffline(
+        {
+          'name': '新生乙',
+          'grade': 'G1',
+        },
+        isCreate: true,
+      );
 
       final ops = await svc.getPendingOperations();
       expect(ops.length, 1);
       final op = ops.first;
-      expect(op.type, OperationType.create); // 无 id_card → create
+      expect(op.type, OperationType.create); // 新增学生 → create
       expect(op.entityType, 'student');
       expect(op.entityId, '');
     });

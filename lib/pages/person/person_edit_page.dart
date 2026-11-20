@@ -7,7 +7,9 @@ import '../../utils/validators.dart';
 import '../../services/connectivity_service.dart';
 import '../../services/offline_data_service.dart';
 import '../../api/api_client.dart';
-import '../../constants/relation_list.dart';
+import 'person_change_reason_dialog.dart';
+import 'person_form_data.dart';
+import 'person_form_widgets.dart';
 
 class PersonEditPage extends StatefulWidget {
   final Person? person; 
@@ -63,45 +65,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
   String? _isLeftBehind;
   String? _studentStatus;
 
-  static const Map<String, String> _gradeOptions = {
-    "T1": "托班",
-    "K1": "幼儿园小班", "K2": "幼儿园中班", "K3": "幼儿园大班",
-    "G1": "小学1年级", "G2": "小学2年级", "G3": "小学3年级",
-    "G4": "小学4年级", "G5": "小学5年级", "G6": "小学6年级",
-    "G7": "初中1年级", "G8": "初中2年级", "G9": "初中3年级",
-    "G10": "高中1年级", "G11": "高中2年级", "G12": "高中3年级",
-    "V1": "职高1年级", "V2": "职高2年级", "V3": "职高3年级",
-    "J1": "技校1年级", "J2": "技校2年级", "J3": "技校3年级",
-    "C1": "中专1年级", "C2": "中专2年级", "C3": "中专3年级",
-    "Z1": "专科1年级", "Z2": "专科2年级", "Z3": "专科3年级",
-    "U1": "大学1年级", "U2": "大学2年级", "U3": "大学3年级",
-    "U4": "大学4年级", "U5": "大学5年级",
-    "M1": "硕士1年级", "M2": "硕士2年级", "M3": "硕士3年级",
-    "D1": "博士1年级", "D2": "博士2年级", "D3": "博士3年级", "D4": "博士4年级",
-    "GRADUATED": "已毕业",
-  };
-
-  static final Map<String, String> _gradeDisplayToCode = {
-    for (final e in _gradeOptions.entries) e.value: e.key
-  };
-
-  static const Map<String, String> _oldGradeToCode = {
-    '一年级': 'G1', '二年级': 'G2', '三年级': 'G3',
-    '四年级': 'G4', '五年级': 'G5', '六年级': 'G6',
-    '七年级': 'G7', '八年级': 'G8', '九年级': 'G9',
-    '高一': 'G10', '高二': 'G11', '高三': 'G12',
-    '1': 'G1', '2': 'G2', '3': 'G3', '4': 'G4', '5': 'G5', '6': 'G6',
-    '7': 'G7', '8': 'G8', '9': 'G9',
-    '10': 'G10', '11': 'G11', '12': 'G12',
-  };
-
-  String? _normalizeGrade(String? grade) {
-    if (grade == null || grade.isEmpty) return null;
-    if (_gradeOptions.containsKey(grade)) return grade;
-    if (_gradeDisplayToCode.containsKey(grade)) return _gradeDisplayToCode[grade];
-    if (_oldGradeToCode.containsKey(grade)) return _oldGradeToCode[grade];
-    return grade;
-  }
+  // 年级字典与归一化规则见 person_form_data.dart（纯数据，可单测）
 
   // 社保卡号2/3 仅由补贴导入自动回填，展示为 卡号+来源（如 6217********（低保202606））
   String _socialCardDisplay(String? card, String? source) {
@@ -165,7 +129,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _tekun = widget.person?.tekun;
     _tekunType = widget.person?.tekunType;
     
-    _grade = _normalizeGrade(widget.person?.education?.grade);
+    _grade = normalizeGrade(widget.person?.education?.grade);
     _isLeftBehind = widget.person?.education?.isLeftBehind;
     _studentStatus = widget.person?.education?.studentStatus;
     
@@ -300,80 +264,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
   }
   
   
-  Map<String, String> _calculateEnrollmentAndGraduation() {
-    final now = DateTime.now();
-    final currentYear = now.year;
-    final currentMonth = now.month;
-
-    String? enrollmentDate = _enrollmentDateController.text.trim();
-    String? graduationDate = _graduationDateController.text.trim();
-
-    
-    final gradeToYears = {
-      'T1': 2,
-      'K1': 3, 'K2': 2, 'K3': 1,
-      'G1': 6, 'G2': 5, 'G3': 4, 'G4': 3, 'G5': 2, 'G6': 1,
-      'G7': 3, 'G8': 2, 'G9': 1,
-      'G10': 3, 'G11': 2, 'G12': 1,
-      'V1': 3, 'V2': 2, 'V3': 1,
-      'J1': 3, 'J2': 2, 'J3': 1,
-      'C1': 3, 'C2': 2, 'C3': 1,
-      'Z1': 3, 'Z2': 2, 'Z3': 1,
-      'U1': 4, 'U2': 3, 'U3': 2, 'U4': 1, 'U5': 0,
-      'M1': 3, 'M2': 2, 'M3': 1,
-      'D1': 4, 'D2': 3, 'D3': 2, 'D4': 1,
-    };
-
-    final gradeToOffset = {
-      'T1': 0,
-      'K1': 0, 'K2': 1, 'K3': 2,
-      'G1': 0, 'G2': 1, 'G3': 2, 'G4': 3, 'G5': 4, 'G6': 5,
-      'G7': 0, 'G8': 1, 'G9': 2,
-      'G10': 0, 'G11': 1, 'G12': 2,
-      'V1': 0, 'V2': 1, 'V3': 2,
-      'J1': 0, 'J2': 1, 'J3': 2,
-      'C1': 0, 'C2': 1, 'C3': 2,
-      'Z1': 0, 'Z2': 1, 'Z3': 2,
-      'U1': 0, 'U2': 1, 'U3': 2, 'U4': 3, 'U5': 4,
-      'M1': 0, 'M2': 1, 'M3': 2,
-      'D1': 0, 'D2': 1, 'D3': 2, 'D4': 3,
-    };
-
-    if (_grade != null && _grade!.isNotEmpty) {
-      final offset = gradeToOffset[_grade] ?? 0;
-
-      
-      
-      
-      int enrollmentYear;
-      if (currentMonth >= 9) {
-        enrollmentYear = currentYear - offset;
-      } else {
-        enrollmentYear = currentYear - offset - 1;
-      }
-
-      
-      if (enrollmentDate.isEmpty) {
-        enrollmentDate = '$enrollmentYear-09-01';
-      }
-
-      
-      if (graduationDate.isEmpty) {
-        final totalYears = gradeToYears[_grade] ?? 0;
-        if (totalYears > 0) {
-          // 毕业年份 = 入学年份 + 已读年级偏移 + 剩余学年数
-          // 例：六年级在读(2026-2027学年) → 2021 + 5 + 1 = 2027-06-30 毕业
-          final gradYear = enrollmentYear + offset + totalYears;
-          graduationDate = '$gradYear-06-30';
-        }
-      }
-    }
-
-    return {
-      'enrollment_date': enrollmentDate,
-      'graduation_date': graduationDate,
-    };
-  }
+  // 入学/毕业日期推算见 person_form_data.dart（纯函数，可单测）
 
   /// 就读信息 payload：没有学校/年级/班级时返回 null（不提交空记录）。
   ///
@@ -384,7 +275,11 @@ class _PersonEditPageState extends State<PersonEditPage> {
         _classNameController.text.trim().isNotEmpty;
     if (!hasEducation) return null;
 
-    final dates = _calculateEnrollmentAndGraduation();
+    final dates = calculateEnrollmentAndGraduation(
+      grade: _grade,
+      enrollmentDate: _enrollmentDateController.text.trim(),
+      graduationDate: _graduationDateController.text.trim(),
+    );
     return {
       'school_name': _schoolNameController.text.trim(),
       'grade': _grade ?? '',
@@ -411,251 +306,69 @@ class _PersonEditPageState extends State<PersonEditPage> {
     await OfflineDataService().savePersonOffline(
       offlineData,
       isCreate: widget.person == null,
+      // 记录进入编辑页时服务端的版本，同步时据此做真实冲突检测
+      baseUpdatedAt: widget.person?.updatedAt,
     );
   }
 
   Future<String?> _showLandAreaChangeDialog() async {
-    final reasonController = TextEditingController();
-    
-    return showDialog<String>(
+    final reason = await showPersonChangeReasonDialog(
       context: context,
-      barrierDismissible: false, 
-      builder: (context) => AlertDialog(
-        title: const Text('土地面积变更'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '土地面积已从 "${widget.person?.landArea ?? ''}" 亩修改为 "${_landAreaController.text.trim()}" 亩',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '请输入修改原因：',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: '例如：土地流转、测量修正等',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final reason = reasonController.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入修改原因')),
-                );
-                return;
-              }
-              Navigator.of(context).pop(reason);
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    ).then((reason) {
-      if (reason != null) {
-        _landAreaChangeReason = reason;
-      }
-      return reason;
-    });
+      title: '土地面积变更',
+      label: '土地面积',
+      oldValue: widget.person?.landArea ?? '',
+      newValue: _landAreaController.text.trim(),
+      hint: '例如：土地流转、测量修正等',
+    );
+    if (reason != null) {
+      _landAreaChangeReason = reason;
+    }
+    return reason;
   }
 
   Future<String?> _showLocalWelfareForestAreaChangeDialog() async {
-    final reasonController = TextEditingController();
-
-    return showDialog<String>(
+    final reason = await showPersonChangeReasonDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('地方公益林变更'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '地方公益林已从 "${widget.person?.localWelfareForestArea ?? ''}" 亩修改为 "${_localWelfareForestAreaController.text.trim()}" 亩',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '请输入修改原因：',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: '例如：林地流转、测量修正等',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final reason = reasonController.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入修改原因')),
-                );
-                return;
-              }
-              Navigator.of(context).pop(reason);
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    ).then((reason) {
-      if (reason != null) {
-        _localWelfareForestChangeReason = reason;
-      }
-      return reason;
-    });
+      title: '地方公益林变更',
+      label: '地方公益林',
+      oldValue: widget.person?.localWelfareForestArea ?? '',
+      newValue: _localWelfareForestAreaController.text.trim(),
+      hint: '例如：林地流转、测量修正等',
+    );
+    if (reason != null) {
+      _localWelfareForestChangeReason = reason;
+    }
+    return reason;
   }
 
   Future<String?> _showNationalWelfareForestAreaChangeDialog() async {
-    final reasonController = TextEditingController();
-
-    return showDialog<String>(
+    final reason = await showPersonChangeReasonDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('国家公益林变更'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '国家公益林已从 "${widget.person?.nationalWelfareForestArea ?? ''}" 亩修改为 "${_nationalWelfareForestAreaController.text.trim()}" 亩',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '请输入修改原因：',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: '例如：林地流转、测量修正等',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final reason = reasonController.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入修改原因')),
-                );
-                return;
-              }
-              Navigator.of(context).pop(reason);
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    ).then((reason) {
-      if (reason != null) {
-        _nationalWelfareForestChangeReason = reason;
-      }
-      return reason;
-    });
+      title: '国家公益林变更',
+      label: '国家公益林',
+      oldValue: widget.person?.nationalWelfareForestArea ?? '',
+      newValue: _nationalWelfareForestAreaController.text.trim(),
+      hint: '例如：林地流转、测量修正等',
+    );
+    if (reason != null) {
+      _nationalWelfareForestChangeReason = reason;
+    }
+    return reason;
   }
 
   Future<String?> _showCommercialForestAreaChangeDialog() async {
-    final reasonController = TextEditingController();
-
-    return showDialog<String>(
+    final reason = await showPersonChangeReasonDialog(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('非国有天然商品林变更'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '非国有天然商品林已从 "${widget.person?.commercialForestArea ?? ''}" 亩修改为 "${_commercialForestAreaController.text.trim()}" 亩',
-              style: const TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              '请输入修改原因：',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: reasonController,
-              decoration: const InputDecoration(
-                hintText: '例如：林地流转、测量修正等',
-                border: OutlineInputBorder(),
-              ),
-              maxLines: 3,
-              autofocus: true,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(null),
-            child: const Text('取消'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final reason = reasonController.text.trim();
-              if (reason.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('请输入修改原因')),
-                );
-                return;
-              }
-              Navigator.of(context).pop(reason);
-            },
-            child: const Text('确定'),
-          ),
-        ],
-      ),
-    ).then((reason) {
-      if (reason != null) {
-        _commercialForestChangeReason = reason;
-      }
-      return reason;
-    });
+      title: '非国有天然商品林变更',
+      label: '非国有天然商品林',
+      oldValue: widget.person?.commercialForestArea ?? '',
+      newValue: _commercialForestAreaController.text.trim(),
+      hint: '例如：林地流转、测量修正等',
+    );
+    if (reason != null) {
+      _commercialForestChangeReason = reason;
+    }
+    return reason;
   }
 
   /// 死亡时间：仅在"是否死亡"选"是"后显示，点击选择日期
@@ -876,6 +589,12 @@ class _PersonEditPageState extends State<PersonEditPage> {
         if (idCard.isEmpty) {
           throw Exception('人员身份证号为空，无法更新');
         }
+        // 带上打开编辑页时的 updated_at：服务端发现期间被改过会返回 409，
+        // 避免"后保存的人静默覆盖前一个人"。
+        final baseUpdatedAt = widget.person?.updatedAt;
+        if (baseUpdatedAt != null && baseUpdatedAt.isNotEmpty) {
+          data['updated_at'] = baseUpdatedAt;
+        }
         success = await PersonApi.updatePerson(
           idCard,
           data,
@@ -915,6 +634,17 @@ class _PersonEditPageState extends State<PersonEditPage> {
             const SnackBar(content: Text('保存失败')),
           );
         }
+      }
+    } on PersonConflictException catch (e) {
+      // 保存期间别人改过这条记录：不覆盖、不入队，让用户回详情页刷新后再改
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('保存失败：${e.message}。请返回详情刷新后重新编辑'),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     } on OfflineQueueException {
       // 在线但服务器不可达/超时：保留草稿，避免用户白填一遍
@@ -1409,56 +1139,39 @@ class _PersonEditPageState extends State<PersonEditPage> {
     );
   }
 
-  Widget _buildSection(String title, List<Widget> children) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: children,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-  
-  /// 与户主关系：标准下拉（存量不在标准列表的旧值自动并入选项，避免丢失）
-  Widget _buildRelationDropdown() {
-    final current = _relationController.text.trim();
-    final items = <String>[...kRelations];
-    if (current.isNotEmpty && !items.contains(current)) {
-      items.insert(0, current);
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: DropdownButtonFormField<String>(
-        initialValue: current.isEmpty ? null : current,
-        decoration: const InputDecoration(
-          labelText: '与户主关系',
-          border: OutlineInputBorder(),
-        ),
-        items: [
-          for (final r in items) DropdownMenuItem(value: r, child: Text(r)),
-        ],
+  Widget _buildSection(String title, List<Widget> children) =>
+      PersonFormWidgets.section(title, children);
+
+  Widget _buildRelationDropdown() => PersonFormWidgets.relationDropdown(
+        current: _relationController.text.trim(),
         onChanged: (v) {
           setState(() {
             _relationController.text = v ?? '';
           });
         },
-      ),
-    );
-  }
+      );
+
+  Widget _buildGradeDropdown() => PersonFormWidgets.gradeDropdown(
+        value: _grade,
+        onChanged: (v) {
+          setState(() {
+            _grade = v;
+          });
+        },
+      );
+
+  Widget _buildDropdown({
+    required String? value,
+    required String label,
+    required List<String> items,
+    required void Function(String?) onChanged,
+  }) =>
+      PersonFormWidgets.dropdown(
+        value: value,
+        label: label,
+        items: items,
+        onChanged: onChanged,
+      );
 
   Widget _buildTextField({
     required TextEditingController controller,
@@ -1470,77 +1183,16 @@ class _PersonEditPageState extends State<PersonEditPage> {
     bool enabled = true,
     bool readOnly = false,
     String? hintText,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: TextFormField(
+  }) =>
+      PersonFormWidgets.textField(
         controller: controller,
-        readOnly: readOnly,
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hintText,
-          border: const OutlineInputBorder(),
-          filled: !enabled,
-        ),
+        label: label,
         validator: validator,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         maxLines: maxLines,
         enabled: enabled,
-      ),
-    );
-  }
-  
-  Widget _buildGradeDropdown() {
-    final value = _grade != null && _grade!.isEmpty ? null : _grade;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: DropdownButtonFormField<String>(
-        value: value,
-        menuMaxHeight: 300,
-        decoration: const InputDecoration(
-          labelText: '年级',
-          border: OutlineInputBorder(),
-        ),
-        items: [
-          const DropdownMenuItem(value: null, child: Text('请选择')),
-          ..._gradeOptions.entries.map((e) => DropdownMenuItem(
-            value: e.key,
-            child: Text(e.value),
-          )),
-        ],
-        onChanged: (v) {
-          setState(() {
-            _grade = v;
-          });
-        },
-      ),
-    );
-  }
-
-  Widget _buildDropdown({
-    required String? value,
-    required String label,
-    required List<String> items,
-    required void Function(String?) onChanged,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: DropdownButtonFormField<String>(
-        value: value?.isEmpty == true ? null : value,
-        decoration: InputDecoration(
-          labelText: label,
-          border: const OutlineInputBorder(),
-        ),
-        menuMaxHeight: 300,
-        items: items.map((item) {
-          return DropdownMenuItem(
-            value: item.isEmpty ? null : item,
-            child: Text(item.isEmpty ? '请选择' : item),
-          );
-        }).toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
+        readOnly: readOnly,
+        hintText: hintText,
+      );
 }
