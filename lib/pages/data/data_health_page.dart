@@ -8,7 +8,7 @@ import '../person/person_detail_page.dart';
 /// 村级数据体检
 ///
 /// 按常见数据质量问题分组列出待补录人员：缺身份证、身份证格式错、
-/// 缺电话、缺户号、本户无户主、同一身份证挂多个户号、学生缺监护人电话。
+/// 缺电话、缺户号、本户无户主、同一身份证挂多个户号；学生缺监护人电话为参考项（非必填）。
 /// 只读清单，点人跳人员详情去改，不在本页修改任何数据。
 class DataHealthPage extends StatefulWidget {
   const DataHealthPage({super.key});
@@ -216,9 +216,13 @@ class _DataHealthPageState extends State<DataHealthPage> {
     final items =
         rawItems.map((e) => Map<String, dynamic>.from(e as Map)).toList();
 
+    final required = (check['required'] as bool?) ?? true;
+
     final color = count == 0
         ? Colors.grey
-        : (severity == 'high' ? Colors.red.shade600 : Colors.orange.shade700);
+        : !required
+            ? Colors.blueGrey
+            : (severity == 'high' ? Colors.red.shade600 : Colors.orange.shade700);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
@@ -231,15 +235,19 @@ class _DataHealthPageState extends State<DataHealthPage> {
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         childrenPadding: EdgeInsets.zero,
         leading: Icon(
-          count == 0 ? Icons.check_circle : Icons.error_outline,
+          count == 0
+              ? Icons.check_circle
+              : (required ? Icons.error_outline : Icons.info_outline),
           color: color,
         ),
         title: Text(
-          label,
+          required ? label : '$label（非必填）',
           style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
         ),
         subtitle: Text(
-          count == 0 ? '无问题' : '$count 条',
+          count == 0
+              ? '无问题'
+              : (required ? '$count 条' : '$count 条 · 参考，不计入待补录'),
           style: TextStyle(fontSize: 12, color: color),
         ),
         trailing: count == 0

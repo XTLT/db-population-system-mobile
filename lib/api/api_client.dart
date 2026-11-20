@@ -20,6 +20,10 @@ class ApiClient {
   String? _pinnedCertFingerprint; // 服务器证书 SHA-256 指纹（从 assets 加载）
   SecurityContext? _mtlsContext; // mTLS：客户端证书上下文（从 assets 加载）
 
+  /// 业务请求收到 401（token 已被服务器判定失效）时触发。
+  /// 由 MainApp 注册到 AuthProvider，ApiClient 本身不依赖登录态实现。
+  Future<void> Function()? onUnauthorized;
+
   final Map<String, int> _activeRequests = {};
   static const int _maxConcurrentRequests = 20;  
   
@@ -204,6 +208,18 @@ class ApiClient {
           }
         }
         
+        // 401：token 已失效。登录/校验接口自身的 401 不代表"登录过期"
+        // （例如密码错误），必须排除；其余业务请求统一交给 AuthProvider
+        // 处理（并发 401 由其在内部防抖，只登出一次）。
+        if (error.response?.statusCode == 401 &&
+            !_isAuthPath(error.requestOptions.path)) {
+          try {
+            await onUnauthorized?.call();
+          } catch (e) {
+            debugPrint('处理登录失效回调失败: $e');
+          }
+        }
+
         return handler.next(error);
       },
     ));
@@ -327,6 +343,12 @@ class ApiClient {
     return error.type == DioExceptionType.connectionTimeout ||
            error.type == DioExceptionType.sendTimeout ||
            error.type == DioExceptionType.receiveTimeout;
+  }
+
+  /// 登录与 token 校验接口：它们的 401 属于业务失败（如密码错误），
+  /// 不能触发"登录已过期"的全局登出。
+  bool _isAuthPath(String path) {
+    return path.contains('/api/login') || path.contains('/api/check_token');
   }
   
   Future<String?> _resolveToIPv4(String url) async {

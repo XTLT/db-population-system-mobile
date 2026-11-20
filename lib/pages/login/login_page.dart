@@ -9,7 +9,11 @@ import '../../api/api_client.dart';
 import '../../widgets/update_dialog.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  /// 是否因 token 失效被动回到登录页；为 true 时显示"登录已过期"提示。
+  /// 由外层传入而不是在 build 里读 Provider，方便引导页等无 Provider 场景直接构造。
+  final bool sessionExpired;
+
+  const LoginPage({super.key, this.sessionExpired = false});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -20,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  
+
   @override
   void dispose() {
     _usernameController.dispose();
@@ -35,7 +39,7 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) UpdateDialog.showIfNeeded(context);
     });
   }
-  
+
   Future<void> _login() async {
     if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       setState(() {
@@ -43,21 +47,20 @@ class _LoginPageState extends State<LoginPage> {
       });
       return;
     }
-    
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
-    
+
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final result = await authProvider.login(
         _usernameController.text,
         _passwordController.text,
       );
-      
+
       if (result['success'] == true && mounted) {
-        
         if (result['require_password_change'] == true) {
           _showForceChangePasswordDialog();
         } else {
@@ -80,13 +83,12 @@ class _LoginPageState extends State<LoginPage> {
       });
     }
   }
-  
-  
+
   void _showForceChangePasswordDialog() {
     final newPasswordController = TextEditingController();
     final confirmPasswordController = TextEditingController();
     bool isLoading = false;
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -132,83 +134,91 @@ class _LoginPageState extends State<LoginPage> {
           ),
           actions: [
             TextButton(
-              onPressed: isLoading ? null : () {
-                Navigator.of(dialogContext).pop();
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const HomePage()),
-                );
-              },
+              onPressed: isLoading
+                  ? null
+                  : () {
+                      Navigator.of(dialogContext).pop();
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(builder: (_) => const HomePage()),
+                      );
+                    },
               child: const Text('稍后再说'),
             ),
             ElevatedButton(
-              onPressed: isLoading ? null : () async {
-                final newPassword = newPasswordController.text;
-                final confirmPassword = confirmPasswordController.text;
-                
-                
-                if (newPassword.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('请输入新密码')),
-                  );
-                  return;
-                }
-                
-                if (newPassword.length < 6) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('密码至少需要6位')),
-                  );
-                  return;
-                }
-                
-                if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d).+$').hasMatch(newPassword)) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('密码必须包含字母和数字')),
-                  );
-                  return;
-                }
-                
-                if (newPassword != confirmPassword) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('两次输入的密码不一致')),
-                  );
-                  return;
-                }
-                
-                setState(() => isLoading = true);
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      final newPassword = newPasswordController.text;
+                      final confirmPassword = confirmPasswordController.text;
 
-                final messenger = ScaffoldMessenger.of(context);
-                final nav = Navigator.of(context);
-                final dialogNav = Navigator.of(dialogContext);
-                try {
-                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                  final result = await authProvider.forceChangePassword(newPassword);
+                      if (newPassword.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('请输入新密码')),
+                        );
+                        return;
+                      }
 
-                  if (result['success'] == true) {
-                    if (mounted) {
-                      dialogNav.pop();
-                      messenger.showSnackBar(
-                        const SnackBar(
-                          content: Text('密码修改成功'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                      nav.pushReplacement(
-                        MaterialPageRoute(builder: (_) => const HomePage()),
-                      );
-                    }
-                  } else {
-                    messenger.showSnackBar(
-                      SnackBar(content: Text(result['message'] ?? '修改失败')),
-                    );
-                  }
-                } catch (e) {
-                  messenger.showSnackBar(
-                    SnackBar(content: Text('修改密码失败: $e')),
-                  );
-                } finally {
-                  setState(() => isLoading = false);
-                }
-              },
+                      if (newPassword.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('密码至少需要6位')),
+                        );
+                        return;
+                      }
+
+                      if (!RegExp(r'^(?=.*[A-Za-z])(?=.*\d).+$')
+                          .hasMatch(newPassword)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('密码必须包含字母和数字')),
+                        );
+                        return;
+                      }
+
+                      if (newPassword != confirmPassword) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('两次输入的密码不一致')),
+                        );
+                        return;
+                      }
+
+                      setState(() => isLoading = true);
+
+                      final messenger = ScaffoldMessenger.of(context);
+                      final nav = Navigator.of(context);
+                      final dialogNav = Navigator.of(dialogContext);
+                      try {
+                        final authProvider =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final result =
+                            await authProvider.forceChangePassword(newPassword);
+
+                        if (result['success'] == true) {
+                          if (mounted) {
+                            dialogNav.pop();
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('密码修改成功'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                            nav.pushReplacement(
+                              MaterialPageRoute(
+                                  builder: (_) => const HomePage()),
+                            );
+                          }
+                        } else {
+                          messenger.showSnackBar(
+                            SnackBar(
+                                content: Text(result['message'] ?? '修改失败')),
+                          );
+                        }
+                      } catch (e) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('修改密码失败: $e')),
+                        );
+                      } finally {
+                        setState(() => isLoading = false);
+                      }
+                    },
               child: isLoading
                   ? const SizedBox(
                       width: 20,
@@ -222,8 +232,7 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-  
-  
+
   Future<void> _testConnection() async {
     showDialog(
       context: context,
@@ -238,30 +247,28 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
     );
-    
+
     try {
-      
       final dio = Dio();
       // 4G/弱网下首连较慢，放宽到 20 秒避免误报"连接失败"
       dio.options.connectTimeout = const Duration(seconds: 20);
       dio.options.receiveTimeout = const Duration(seconds: 20);
-      
+
       // 证书钉扎（与 ApiClient 共用）
       ApiClient.applyCertificatePinning(dio);
-      
+
       final url = AppConfig.apiBaseUrl;
-      
+
       debugPrint('测试连接 URL: $url');
-      
-      
+
       final healthResponse = await dio.get('$url/api/health');
       debugPrint('Health 响应: ${healthResponse.data}');
       if (!mounted) return;
-      
+
       // 使用用户输入的用户名和密码测试登录
       final testUsername = _usernameController.text.trim();
       final testPassword = _passwordController.text;
-      
+
       if (testUsername.isEmpty || testPassword.isEmpty) {
         // 用户未输入凭据，只测试健康检查
         debugPrint('未输入用户名或密码，跳过登录测试');
@@ -289,7 +296,7 @@ class _LoginPageState extends State<LoginPage> {
         }
         return;
       }
-      
+
       // 使用用户输入的凭据测试登录（发送原始密码以支持 Argon2id）
       final loginResponse = await dio.post(
         '$url/api/login',
@@ -304,7 +311,7 @@ class _LoginPageState extends State<LoginPage> {
 
       if (!mounted) return;
       Navigator.pop(context);
-      
+
       if (healthResponse.statusCode == 200 && loginResponse.statusCode == 200) {
         final loginSuccess = loginResponse.data['success'] == true;
         showDialog(
@@ -330,11 +337,12 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(height: 8),
                 Text('登录测试: ${loginSuccess ? "成功" : "失败"}'),
                 if (!loginSuccess && loginResponse.data['error'] != null)
-                  Text('错误: ${loginResponse.data['error']}', 
-                    style: const TextStyle(color: Colors.red, fontSize: 12)),
+                  Text('错误: ${loginResponse.data['error']}',
+                      style: const TextStyle(color: Colors.red, fontSize: 12)),
                 if (loginSuccess)
-                  Text('用户: ${loginResponse.data['user']?['username'] ?? testUsername}',
-                    style: const TextStyle(color: Colors.green)),
+                  Text(
+                      '用户: ${loginResponse.data['user']?['username'] ?? testUsername}',
+                      style: const TextStyle(color: Colors.green)),
               ],
             ),
             actions: [
@@ -352,7 +360,7 @@ class _LoginPageState extends State<LoginPage> {
 
       debugPrint('连接错误: ${e.type} - ${e.message}');
       debugPrint('错误详情: ${e.error}');
-      
+
       String errorDetail = '';
       if (e.type == DioExceptionType.connectionError) {
         errorDetail = '无法建立连接到 ${AppConfig.apiBaseUrl}\n\n'
@@ -370,7 +378,7 @@ class _LoginPageState extends State<LoginPage> {
       } else {
         errorDetail = '${e.type}: ${e.message}\n${e.error}';
       }
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -409,11 +417,10 @@ class _LoginPageState extends State<LoginPage> {
       );
     }
   }
-  
-  
+
   void _showServerConfigDialog() {
     final urlController = TextEditingController(text: AppConfig.apiBaseUrl);
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -458,11 +465,12 @@ class _LoginPageState extends State<LoginPage> {
                 );
                 return;
               }
-              
-              if (!newUrl.startsWith('http://') && !newUrl.startsWith('https://')) {
+
+              if (!newUrl.startsWith('http://') &&
+                  !newUrl.startsWith('https://')) {
                 newUrl = 'http://$newUrl';
               }
-              
+
               try {
                 final uri = Uri.parse(newUrl);
                 if (uri.host.isEmpty) {
@@ -479,9 +487,9 @@ class _LoginPageState extends State<LoginPage> {
                 }
                 return;
               }
-              
-              
-              final (isValid, warningMessage) = AppConfig.validateServerUrl(newUrl);
+
+              final (isValid, warningMessage) =
+                  AppConfig.validateServerUrl(newUrl);
               if (!isValid) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -493,8 +501,7 @@ class _LoginPageState extends State<LoginPage> {
                 }
                 return;
               }
-              
-              
+
               if (warningMessage != null) {
                 if (!mounted) return;
                 final confirmed = await showDialog<bool>(
@@ -517,10 +524,9 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 );
-                
+
                 if (confirmed != true) return;
               }
-
 
               await AppConfig.updateBaseUrl(newUrl);
 
@@ -540,93 +546,137 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
+    final sessionExpired = widget.sessionExpired;
     return Scaffold(
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 400),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.people,
-                size: 80,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(height: 24),
-              Text(
-                AppConfig.appName,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 48),
-              TextField(
-                controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: '用户名',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.person),
+      body: LayoutBuilder(
+        builder: (context, viewport) {
+          // 小屏 / 键盘弹出 / 多一行过期提示时，登录页可滚动，避免 Column 溢出
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight:
+                      viewport.maxHeight > 48 ? viewport.maxHeight - 48 : 0,
+                  maxWidth: 400,
                 ),
-                enabled: !_isLoading,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: '密码',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.lock),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.people,
+                      size: 80,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      AppConfig.appName,
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 48),
+                    if (sessionExpired) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.orange.withValues(alpha: 0.4),
+                          ),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.orange, size: 20),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '登录已过期，请重新登录。未保存的编辑内容可能已丢失。',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                    TextField(
+                      controller: _usernameController,
+                      decoration: const InputDecoration(
+                        labelText: '用户名',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.person),
+                      ),
+                      enabled: !_isLoading,
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(
+                        labelText: '密码',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.lock),
+                      ),
+                      obscureText: true,
+                      enabled: !_isLoading,
+                      onSubmitted: (_) => _login(),
+                    ),
+                    if (_errorMessage != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _errorMessage!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _login,
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Text('登录'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextButton.icon(
+                      onPressed: _isLoading ? null : _showServerConfigDialog,
+                      icon: const Icon(Icons.settings, size: 20),
+                      label: const Text('设置服务器地址'),
+                    ),
+                    TextButton.icon(
+                      onPressed: _isLoading ? null : _testConnection,
+                      icon: const Icon(Icons.network_check, size: 20),
+                      label: const Text('测试连接'),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      '当前服务器: ${AppConfig.apiBaseUrl}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-                obscureText: true,
-                enabled: !_isLoading,
-                onSubmitted: (_) => _login(),
               ),
-              if (_errorMessage != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  _errorMessage!,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
-                  child: _isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('登录'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: _isLoading ? null : _showServerConfigDialog,
-                icon: const Icon(Icons.settings, size: 20),
-                label: const Text('设置服务器地址'),
-              ),
-              TextButton.icon(
-                onPressed: _isLoading ? null : _testConnection,
-                icon: const Icon(Icons.network_check, size: 20),
-                label: const Text('测试连接'),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '当前服务器: ${AppConfig.apiBaseUrl}',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

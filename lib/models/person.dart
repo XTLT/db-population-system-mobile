@@ -63,6 +63,7 @@ class Person {
   final String? phone;
   final String? age;
   final String? isDead;
+  final String? deathDate;
   final String? remark;
   final String? poorType;
   final String? disability;
@@ -101,6 +102,7 @@ class Person {
     this.phone,
     this.age,
     this.isDead,
+    this.deathDate,
     this.remark,
     this.poorType,
     this.disability,
@@ -141,6 +143,7 @@ class Person {
       phone: json['phone'],
       age: json['age'],
       isDead: json['is_dead'],
+      deathDate: json['death_date'],
       remark: json['remark'],
       poorType: json['poor_type'],
       disability: json['disability'],
@@ -184,6 +187,7 @@ class Person {
       'phone': phone,
       'age': age,
       'is_dead': isDead,
+      'death_date': deathDate,
       'remark': remark,
       'poor_type': poorType,
       'disability': disability,

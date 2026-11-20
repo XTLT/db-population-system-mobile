@@ -250,7 +250,12 @@ class _PersonDetailPageState extends State<PersonDetailPage>
                             if (person.isDeceased) ...[
                               const SizedBox(width: 8),
                               Chip(
-                                label: const Text('已死亡'),
+                                label: Text(
+                                  person.deathDate != null &&
+                                          person.deathDate!.isNotEmpty
+                                      ? '已死亡 ${person.deathDate}'
+                                      : '已死亡',
+                                ),
                                 backgroundColor: Colors.red.shade100,
                               ),
                             ],

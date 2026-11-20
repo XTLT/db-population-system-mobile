@@ -16,6 +16,19 @@ class AuthProvider with ChangeNotifier {
   /// （常见于切后台回来时网络尚未恢复），UI 可据此提示「离线/待验证」。
   bool _tokenVerified = false;
 
+  /// 是否因 token 失效被强制登出；登录页据此显示"登录已过期"提示。
+  /// 用户主动退出登录时为 false。
+  bool _sessionExpired = false;
+
+  /// 并发请求同时 401 时，只处理一次。
+  bool _handlingExpiry = false;
+
+  /// 最近一次 token 校验（或明确不可用）的时间，用于切回前台时节流。
+  DateTime? _lastVerifiedAt;
+
+  /// 切回前台重新校验的最小间隔。
+  static const Duration _revalidateInterval = Duration(minutes: 5);
+
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
@@ -32,6 +45,7 @@ class AuthProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get tokenVerified => _tokenVerified;
   bool get isAdmin => _user?.role == 'admin';
+  bool get sessionExpired => _sessionExpired;
 
 
   /// 应用启动 / 切后台回来时恢复登录态。
@@ -71,11 +85,13 @@ class AuthProvider with ChangeNotifier {
       try {
         final result = await AuthApi.checkToken(_token!);
         if (result == CheckTokenResult.invalid) {
-          // 服务器明确判定 token 失效 → 登出
-          await logout();
+          // 服务器明确判定 token 失效 → 登出，并标记"登录已过期"
+          await logout(expired: true);
         } else if (result == CheckTokenResult.valid) {
           _tokenVerified = true;
         }
+        // 无论有效还是不可用都记时间，避免切回前台频繁打校验接口
+        _lastVerifiedAt = DateTime.now();
         // unavailable：保持登录态，_tokenVerified 维持 false
       } catch (_) {
         // checkToken 自身异常：保守保留登录态，不误判登出
@@ -96,6 +112,8 @@ class AuthProvider with ChangeNotifier {
       if (result['success'] == true) {
         _isLoggedIn = true;
         _tokenVerified = true;
+        _sessionExpired = false;
+        _lastVerifiedAt = DateTime.now();
         _token = result['token'];
         _user = result['user'];
 
@@ -126,7 +144,12 @@ class AuthProvider with ChangeNotifier {
   }
 
 
-  Future<void> logout() async {
+  /// 退出登录。
+  ///
+  /// [expired] 为 true 表示因 token 失效被动登出，登录页会显示提示；
+  /// 用户主动退出登录保持默认 false，不显示该提示。
+  Future<void> logout({bool expired = false}) async {
+    _sessionExpired = expired;
     _isLoggedIn = false;
     _tokenVerified = false;
     _token = null;
@@ -143,6 +166,52 @@ class AuthProvider with ChangeNotifier {
     ApiClient().clearToken();
 
     notifyListeners();
+  }
+
+  /// 业务请求收到 401 / 校验明确判定失效 → 统一登出。
+  /// 并发请求同时 401 时只执行一次。
+  Future<void> handleSessionExpired() async {
+    if (!_isLoggedIn || _handlingExpiry) return;
+    _handlingExpiry = true;
+    try {
+      await logout(expired: true);
+    } finally {
+      _handlingExpiry = false;
+    }
+  }
+
+  /// 切回前台是否该重新校验：距上次校验超过 [_revalidateInterval] 才校验，
+  /// 避免频繁切换前后台时每次都打接口。
+  bool shouldRevalidate([DateTime? now]) {
+    if (!_isLoggedIn) return false;
+    final last = _lastVerifiedAt;
+    if (last == null) return true;
+    return (now ?? DateTime.now()).difference(last) >= _revalidateInterval;
+  }
+
+  /// 切回前台重新校验 token：只有服务器明确判定无效才登出，
+  /// 网络异常保持登录态（与 [init] 同口径）。
+  Future<void> revalidate() async {
+    final token = _token;
+    if (token == null || !_isLoggedIn || _handlingExpiry) return;
+
+    // 先记时间，网络异常也节流，避免短时间内反复打接口
+    _lastVerifiedAt = DateTime.now();
+
+    try {
+      final result = await AuthApi.checkToken(token);
+      // 校验期间已换了 token（重新登录）或已登出，本次结果作废
+      if (_token != token || !_isLoggedIn) return;
+
+      if (result == CheckTokenResult.invalid) {
+        await handleSessionExpired();
+      } else if (result == CheckTokenResult.valid) {
+        _tokenVerified = true;
+        notifyListeners();
+      }
+    } catch (_) {
+      // 校验自身异常：保留登录态，不误判登出
+    }
   }
 
 

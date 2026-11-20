@@ -49,6 +49,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
   
   
   String? _isDead;
+  String? _deathDate;
   String? _poorType;
   String? _disability;
   String? _disabilityType;
@@ -149,6 +150,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
 
     
     _isDead = widget.person?.isDead;
+    _deathDate = widget.person?.deathDate;
     _poorType = widget.person?.poorType;
     _disability = widget.person?.disability;
     _disabilityType = widget.person?.disabilityType;
@@ -574,8 +576,67 @@ class _PersonEditPageState extends State<PersonEditPage> {
     });
   }
 
+  /// 死亡时间：仅在"是否死亡"选"是"后显示，点击选择日期
+  Widget _buildDeathDateField() {
+    // 存量已死亡人员（原本就是"是"）不强制补录，标签不加星号
+    final required = widget.person?.isDead != '是';
+    final filled = _deathDate != null && _deathDate!.isNotEmpty;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: InkWell(
+        onTap: _pickDeathDate,
+        borderRadius: BorderRadius.circular(4),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: required ? '死亡时间 *' : '死亡时间',
+            hintText: '点击选择日期',
+            border: const OutlineInputBorder(),
+            suffixIcon: const Icon(Icons.calendar_today, size: 18),
+          ),
+          child: Text(
+            filled ? _deathDate! : '未填写',
+            style: TextStyle(color: filled ? null : Colors.grey),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDeathDate() async {
+    final now = DateTime.now();
+    var initial = now;
+    if (_deathDate != null && _deathDate!.isNotEmpty) {
+      initial = DateTime.tryParse(_deathDate!) ?? now;
+    }
+    if (initial.isAfter(now)) initial = now;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: now,
+      helpText: '选择死亡日期',
+    );
+    if (picked != null) {
+      setState(() {
+        _deathDate = '${picked.year.toString().padLeft(4, '0')}-'
+            '${picked.month.toString().padLeft(2, '0')}-'
+            '${picked.day.toString().padLeft(2, '0')}';
+      });
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // 只在"由非死亡改为死亡"时要求填死亡时间；已是死亡的人员改其他信息不强制
+    if (_isDead == '是' &&
+        widget.person?.isDead != '是' &&
+        (_deathDate == null || _deathDate!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('改为死亡时必须填写死亡时间')),
+      );
       return;
     }
 
@@ -641,6 +702,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
         'relation': _relationController.text.trim(),
         'phone': _phoneController.text.trim(),
         'is_dead': _isDead,
+        'death_date': _deathDate ?? '',
         'remark': _remarkController.text.trim(),
         'poor_type': _poorType,
         'disability': _disability,
@@ -827,6 +889,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
                         });
                       },
                     ),
+                    if (_isDead == '是') _buildDeathDateField(),
                   ]),
                   
                   const SizedBox(height: 24),

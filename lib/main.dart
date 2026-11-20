@@ -11,6 +11,7 @@ import 'providers/sync_provider.dart';
 import 'pages/login/login_page.dart';
 import 'pages/home/home_page.dart';
 import 'pages/onboarding/onboarding_page.dart';
+import 'api/api_client.dart';
 import 'pages/sync/conflict_resolution_page.dart';
 import 'services/notification_service.dart';
 import 'services/onboarding_service.dart';
@@ -44,7 +45,10 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  /// 全局导航 Key：登录失效时把任意层级的页面栈退回根路由（登录页）。
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   final AuthProvider _authProvider = AuthProvider();
   final OperationLogProvider _operationLogProvider = OperationLogProvider();
   final BackupProvider _backupProvider = BackupProvider();
@@ -56,8 +60,41 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    
+
+    WidgetsBinding.instance.addObserver(this);
+    // 业务请求收到 401 时由 ApiClient 回调，统一登出并退回登录页
+    ApiClient().onUnauthorized = _handleSessionExpired;
+
     _authProvider.init();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ApiClient().onUnauthorized = null;
+    super.dispose();
+  }
+
+  /// 登录失效的统一出口：清除登录态 → 退回根路由（home 此时已是登录页）。
+  Future<void> _handleSessionExpired() async {
+    await _authProvider.handleSessionExpired();
+    _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    if (!_authProvider.shouldRevalidate()) return;
+    _revalidateAndResetNavigation();
+  }
+
+  /// 切回前台重新校验：超过节流窗口才发请求；
+  /// 服务器明确判定失效时，同样把页面栈退回登录页。
+  Future<void> _revalidateAndResetNavigation() async {
+    await _authProvider.revalidate();
+    if (_authProvider.sessionExpired && !_authProvider.isLoggedIn) {
+      _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    }
   }
 
   @override
@@ -75,6 +112,7 @@ class _MyAppState extends State<MyApp> {
       child: Consumer2<AuthProvider, ThemeProvider>(
         builder: (context, auth, themeProvider, child) {
           return MaterialApp(
+            navigatorKey: _navigatorKey,
             title: AppConfig.appName,
             theme: AppTheme.createTheme(
               seedColor: themeProvider.seedColor,
@@ -91,7 +129,7 @@ class _MyAppState extends State<MyApp> {
                 ? const OnboardingPage()
                 : auth.isLoggedIn
                     ? const HomePage()
-                    : const LoginPage(),
+                    : LoginPage(sessionExpired: auth.sessionExpired),
             routes: {
               '/login': (context) => const LoginPage(),
               '/home': (context) => const HomePage(),
