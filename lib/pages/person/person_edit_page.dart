@@ -112,6 +112,11 @@ class _PersonEditPageState extends State<PersonEditPage> {
   
   bool _isLoading = false;
   bool _autoFillFromIdCard = false;
+  // 同户信息：用于提示"本户已有户主"，避免重复设户主被服务端拒绝
+  int _householdMemberCount = 0;
+  String? _householdHeadName;
+  String? _householdHeadIdCard;
+  bool _householdChecked = false;
   String? _landAreaChangeReason;
   String? _localWelfareForestChangeReason;
   String? _nationalWelfareForestChangeReason;
@@ -168,32 +173,70 @@ class _PersonEditPageState extends State<PersonEditPage> {
     _idCardController.addListener(_onIdCardChanged);
     
     // 新增人员时：自动带出同户户号成员的地址和小组（与 desktop 端行为一致）
-    if (widget.person == null) {
-      final huhao = _huHaoController.text.trim();
-      if (huhao.isNotEmpty) {
-        _autoFillAddressAndGroup(huhao);
-      }
-      _huHaoController.addListener(_onHuHaoChanged);
+    final huhao = _huHaoController.text.trim();
+    if (huhao.isNotEmpty) {
+      // 编辑时只查本户情况用于提示，不覆盖已有地址/小组
+      _autoFillAddressAndGroup(huhao, fillFields: widget.person == null);
     }
+    // 改户号时重新查一次
+    _huHaoController.addListener(_onHuHaoChanged);
   }
 
   Timer? _huHaoDebounce;
 
   void _onHuHaoChanged() {
     _huHaoDebounce?.cancel();
+    final huhao = _huHaoController.text.trim();
+
+    // 换了户号立即撤掉上一个户的提示，等新户查询结果回来再显示，
+    // 否则会把"本户已有户主 X"错挂到另一个户号下面。
+    if (_householdChecked) {
+      setState(() {
+        _householdChecked = false;
+        _householdMemberCount = 0;
+        _householdHeadName = null;
+        _householdHeadIdCard = null;
+      });
+    }
+    if (huhao.isEmpty) return;
+
     _huHaoDebounce = Timer(const Duration(milliseconds: 400), () {
-      final huhao = _huHaoController.text.trim();
-      if (huhao.isEmpty) return;
-      _autoFillAddressAndGroup(huhao);
+      final current = _huHaoController.text.trim();
+      if (current.isEmpty) return;
+      // 编辑时只提示本户户主情况，不覆盖已有地址/小组
+      _autoFillAddressAndGroup(current, fillFields: widget.person == null);
     });
   }
 
-  // 查询同户户号成员，自动填充地址和小组（只填空值，不覆盖用户已输入内容）
-  Future<void> _autoFillAddressAndGroup(String huHao) async {
-    if (widget.person != null) return;
+  // 查询同户户号成员：记录人数/户主用于提示；fillFields=true（新增人员）时
+  // 顺带把地址和小组带出来，只填空值，不覆盖用户已输入内容。
+  Future<void> _autoFillAddressAndGroup(
+    String huHao, {
+    bool fillFields = true,
+  }) async {
     try {
       final members = await PersonApi.getFamilyMembers(huHao);
       if (!mounted) return;
+      // 连改两次户号时，先返回的旧查询不能覆盖当前户的提示
+      if (_huHaoController.text.trim() != huHao) return;
+
+      String? headName;
+      String? headIdCard;
+      for (final m in members) {
+        if ((m.relation ?? '').trim() == '户主') {
+          headName = m.name;
+          headIdCard = m.idCard;
+          break;
+        }
+      }
+      setState(() {
+        _householdChecked = true;
+        _householdMemberCount = members.length;
+        _householdHeadName = headName;
+        _householdHeadIdCard = headIdCard;
+      });
+
+      if (!fillFields) return;
       for (final m in members) {
         final addr = (m.address ?? '').trim();
         if (addr.isNotEmpty) {
@@ -330,6 +373,45 @@ class _PersonEditPageState extends State<PersonEditPage> {
       'enrollment_date': enrollmentDate,
       'graduation_date': graduationDate,
     };
+  }
+
+  /// 就读信息 payload：没有学校/年级/班级时返回 null（不提交空记录）。
+  ///
+  /// 在线保存和离线草稿共用，避免断网新增学生时丢掉就读信息。
+  Map<String, dynamic>? _buildEducationPayload() {
+    final hasEducation = _schoolNameController.text.trim().isNotEmpty ||
+        _grade != null ||
+        _classNameController.text.trim().isNotEmpty;
+    if (!hasEducation) return null;
+
+    final dates = _calculateEnrollmentAndGraduation();
+    return {
+      'school_name': _schoolNameController.text.trim(),
+      'grade': _grade ?? '',
+      'class_name': _classNameController.text.trim(),
+      'guardian': _guardianController.text.trim(),
+      'guardian_phone': _guardianPhoneController.text.trim(),
+      'is_left_behind': _isLeftBehind ?? '否',
+      'student_status': _studentStatus ?? '在读',
+      'enrollment_date':
+          dates['enrollment_date'] ?? _enrollmentDateController.text.trim(),
+      'graduation_date':
+          dates['graduation_date'] ?? _graduationDateController.text.trim(),
+    };
+  }
+
+  /// 离线转存：把就读信息挂在 `__education` 下随人员 payload 一起入队，
+  /// 同步时由 SyncService 拆出来单独提交。
+  Future<void> _saveOffline(Map<String, dynamic> data) async {
+    final education = _buildEducationPayload();
+    final offlineData = <String, dynamic>{...data};
+    if (education != null) {
+      offlineData['__education'] = education;
+    }
+    await OfflineDataService().savePersonOffline(
+      offlineData,
+      isCreate: widget.person == null,
+    );
   }
 
   Future<String?> _showLandAreaChangeDialog() async {
@@ -625,8 +707,61 @@ class _PersonEditPageState extends State<PersonEditPage> {
     }
   }
 
+  /// 人员提交 payload：在线提交与离线草稿共用同一份字段定义。
+  Map<String, dynamic> _buildPersonPayload() {
+    return {
+      'id_card': _idCardController.text.trim(),
+      'name': _nameController.text.trim(),
+      'hu_hao': _huHaoController.text.trim(),
+      'address': _addressController.text.trim(),
+      'group_name': _groupNameController.text.trim(),
+      'relation': _relationController.text.trim(),
+      'phone': _phoneController.text.trim(),
+      'is_dead': _isDead,
+      'death_date': _deathDate ?? '',
+      'remark': _remarkController.text.trim(),
+      'poor_type': _poorType,
+      'disability': _disability,
+      'disability_type': _disabilityType,
+      'dis_level': _disLevel,
+      'dibao': _dibao,
+      'jisheng': _jisheng,
+      'tekun': _tekun,
+      'tekun_type': _tekunType,
+      'social_card1': _socialCard1Controller.text.trim(),
+      'land_area': _landAreaController.text.trim(),
+      'land_area_change_reason': _landAreaChangeReason ?? '',
+      'local_welfare_forest_area':
+          _localWelfareForestAreaController.text.trim(),
+      'local_welfare_forest_change_reason':
+          _localWelfareForestChangeReason ?? '',
+      'national_welfare_forest_area':
+          _nationalWelfareForestAreaController.text.trim(),
+      'national_welfare_forest_change_reason':
+          _nationalWelfareForestChangeReason ?? '',
+      'commercial_forest_area': _commercialForestAreaController.text.trim(),
+      'commercial_forest_change_reason': _commercialForestChangeReason ?? '',
+    };
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    // 本户已有别的户主时，选"户主"必然被服务端拒绝，提前拦下
+    final selfIdCard = widget.person?.idCard ?? '';
+    final hasOtherHead = _householdChecked &&
+        (_householdHeadIdCard ?? '').isNotEmpty &&
+        _householdHeadIdCard != selfIdCard;
+    if (hasOtherHead && _relationController.text.trim() == '户主') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '本户已有户主 ${_householdHeadName ?? ''}，请改选其他关系再保存',
+          ),
+        ),
+      );
       return;
     }
 
@@ -688,41 +823,14 @@ class _PersonEditPageState extends State<PersonEditPage> {
       }
     }
 
+    // 先构造 payload：离线转存与在线提交共用同一份数据
+    final data = _buildPersonPayload();
+
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final data = {
-        'id_card': _idCardController.text.trim(),
-        'name': _nameController.text.trim(),
-        'hu_hao': _huHaoController.text.trim(),
-        'address': _addressController.text.trim(),
-        'group_name': _groupNameController.text.trim(),
-        'relation': _relationController.text.trim(),
-        'phone': _phoneController.text.trim(),
-        'is_dead': _isDead,
-        'death_date': _deathDate ?? '',
-        'remark': _remarkController.text.trim(),
-        'poor_type': _poorType,
-        'disability': _disability,
-        'disability_type': _disabilityType,
-        'dis_level': _disLevel,
-        'dibao': _dibao,
-        'jisheng': _jisheng,
-        'tekun': _tekun,
-        'tekun_type': _tekunType,
-        'social_card1': _socialCard1Controller.text.trim(),
-        'land_area': newLandArea,
-        'land_area_change_reason': _landAreaChangeReason ?? '',
-        'local_welfare_forest_area': newLocalWelfareForestArea,
-        'local_welfare_forest_change_reason': _localWelfareForestChangeReason ?? '',
-        'national_welfare_forest_area': newNationalWelfareForestArea,
-        'national_welfare_forest_change_reason': _nationalWelfareForestChangeReason ?? '',
-        'commercial_forest_area': newCommercialForestArea,
-        'commercial_forest_change_reason': _commercialForestChangeReason ?? '',
-      };
-
       debugPrint('========== 保存数据 ==========');
       debugPrint('土地面积: $newLandArea');
       debugPrint('土地面积变更原因: $_landAreaChangeReason');
@@ -740,7 +848,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
 
       if (!isConnected) {
         
-        await OfflineDataService().savePersonOffline(data);
+        await _saveOffline(data);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -757,12 +865,13 @@ class _PersonEditPageState extends State<PersonEditPage> {
 
       
       bool success;
-      String? personId;
+      String personId = '';
+      bool educationFailed = false;
       if (widget.person == null) {
-        
         success = await PersonApi.addPerson(data);
+        // 新增时服务端返回的 person 没有回传 id，用身份证号继续提交就读信息
+        personId = (data['id_card'] ?? '').toString();
       } else {
-        
         final idCard = widget.person?.idCard ?? '';
         if (idCard.isEmpty) {
           throw Exception('人员身份证号为空，无法更新');
@@ -771,36 +880,17 @@ class _PersonEditPageState extends State<PersonEditPage> {
           idCard,
           data,
         );
-        personId = widget.person?.id ?? idCard;
+        final pid = widget.person?.id ?? '';
+        personId = pid.isEmpty ? idCard : pid;
       }
 
-      
-      if (success && personId != null) {
-        
-        final hasEducation = _schoolNameController.text.trim().isNotEmpty ||
-            _grade != null ||
-            _classNameController.text.trim().isNotEmpty;
-
-        if (hasEducation) {
-          try {
-            
-            final dates = _calculateEnrollmentAndGraduation();
-
-            await PersonApi.updateEducation(personId, {
-              'school_name': _schoolNameController.text.trim(),
-              'grade': _grade ?? '',
-              'class_name': _classNameController.text.trim(),
-              'guardian': _guardianController.text.trim(),
-              'guardian_phone': _guardianPhoneController.text.trim(),
-              'is_left_behind': _isLeftBehind ?? '否',
-              'student_status': _studentStatus ?? '在读',
-              'enrollment_date': dates['enrollment_date'] ?? _enrollmentDateController.text.trim(),
-              'graduation_date': dates['graduation_date'] ?? _graduationDateController.text.trim(),
-            });
-          } catch (e) {
-            
-            debugPrint('保存就读信息失败: $e');
-          }
+      final education = _buildEducationPayload();
+      if (success && personId.isNotEmpty && education != null) {
+        try {
+          await PersonApi.updateEducation(personId, education);
+        } catch (e) {
+          debugPrint('保存就读信息失败: $e');
+          educationFailed = true;
         }
       }
 
@@ -810,7 +900,12 @@ class _PersonEditPageState extends State<PersonEditPage> {
         ApiClient().invalidatePath('GET', '/api/statistics');
         ApiClient().invalidatePath('GET', '/api/students/statistics');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(widget.person == null ? '添加成功' : '保存成功')),
+          SnackBar(
+            content: Text(educationFailed
+                ? '人员已保存，但就读信息未同步，请稍后在编辑页补填'
+                : (widget.person == null ? '添加成功' : '保存成功')),
+            duration: Duration(seconds: educationFailed ? 4 : 2),
+          ),
         );
         Navigator.of(context).pop(true); 
       } else {
@@ -820,6 +915,19 @@ class _PersonEditPageState extends State<PersonEditPage> {
             const SnackBar(content: Text('保存失败')),
           );
         }
+      }
+    } on OfflineQueueException {
+      // 在线但服务器不可达/超时：保留草稿，避免用户白填一遍
+      await _saveOffline(data);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('网络异常，已保存到离线队列，联网后自动提交'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {
@@ -836,10 +944,49 @@ class _PersonEditPageState extends State<PersonEditPage> {
     }
   }
   
+  /// 新增页有姓名/身份证时返回要确认，避免误触返回丢掉刚填的一整页。
+  bool get _hasUnsavedInput =>
+      widget.person == null &&
+      (_nameController.text.trim().isNotEmpty ||
+          _idCardController.text.trim().isNotEmpty);
+
+  Future<void> _onBackPressed() async {
+    if (_isLoading) return; // 提交中不让退出，避免已保存却看不出结果
+    if (!_hasUnsavedInput) {
+      Navigator.of(context).pop();
+      return;
+    }
+    final discard = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('放弃已填写的内容？'),
+        content: const Text('还没保存，返回后已填内容会丢失。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('继续填写'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('放弃'),
+          ),
+        ],
+      ),
+    );
+    if (discard == true && mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          tooltip: '返回',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _onBackPressed,
+        ),
         title: Text(widget.person == null ? '新增人员' : '编辑人员'),
         actions: [
           IconButton(
@@ -856,7 +1003,7 @@ class _PersonEditPageState extends State<PersonEditPage> {
                 controller: _scrollController,
                 padding: const EdgeInsets.all(16),
                 children: [
-                  
+                  _buildHouseholdHint(),
                   _buildSection('基本信息', [
                     _buildTextField(
                       controller: _idCardController,
@@ -1187,6 +1334,81 @@ class _PersonEditPageState extends State<PersonEditPage> {
     );
   }
   
+  /// 展示同户情况：已有户主时提前拦住"关系选户主"的重复提交；
+  /// 编辑本人时区分"您就是本户户主"，避免误报。
+  Widget _buildHouseholdHint() {
+    if (!_householdChecked) {
+      return const SizedBox.shrink();
+    }
+    final huHao = _huHaoController.text.trim();
+    if (huHao.isEmpty) return const SizedBox.shrink();
+
+    final head = _householdHeadName;
+    final relation = _relationController.text.trim();
+    final selfIdCard = widget.person?.idCard ?? '';
+    final isSelfHead = head != null &&
+        head.isNotEmpty &&
+        selfIdCard.isNotEmpty &&
+        _householdHeadIdCard == selfIdCard;
+    String text;
+    Color color;
+    IconData icon;
+
+    if (_householdMemberCount == 0) {
+      text = '户号 $huHao 暂无成员，将按新户录入';
+      color = Colors.blueGrey;
+      icon = Icons.info_outline;
+    } else if (isSelfHead) {
+      if (relation.isNotEmpty && relation != '户主') {
+        text = '本户已有 $_householdMemberCount 人，您是本户户主。'
+            '改选其他关系会取消本户户主';
+        color = Colors.orange.shade800;
+      } else {
+        text = '本户已有 $_householdMemberCount 人，您是本户户主';
+        color = Colors.blueGrey;
+      }
+      icon = Icons.info_outline;
+    } else if (head != null && head.isNotEmpty) {
+      if (relation == '户主') {
+        text = '本户已有 $_householdMemberCount 人，户主是 $head。'
+            '每户只能有一个户主，请改选其他关系，否则保存会被拒绝';
+        color = Colors.red.shade700;
+        icon = Icons.warning_amber_rounded;
+      } else {
+        text = '本户已有 $_householdMemberCount 人，户主：$head';
+        color = Colors.blueGrey;
+        icon = Icons.info_outline;
+      }
+    } else {
+      text = '本户已有 $_householdMemberCount 人，暂未设户主';
+      color = Colors.orange.shade800;
+      icon = Icons.info_outline;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: color, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSection(String title, List<Widget> children) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

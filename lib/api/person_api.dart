@@ -3,6 +3,16 @@ import 'package:dio/dio.dart';
 import '../models/person.dart';
 import 'api_client.dart';
 
+/// 网络层失败（超时、连不上服务器）：调用方可将数据转入离线队列。
+/// 服务端明确返回 4xx/5xx 时不走这里，避免把校验错误永久排进队列反复重试。
+class OfflineQueueException implements Exception {
+  final String message;
+  OfflineQueueException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 class PersonApi {
   static final _dio = ApiClient().dio;
   
@@ -132,6 +142,8 @@ class PersonApi {
       }
       
       return success;
+    } on DioException catch (e) {
+      throw _mapPersonWriteError(e, '添加失败');
     } catch (e) {
       throw Exception('添加失败: $e');
     }
@@ -257,9 +269,31 @@ class PersonApi {
       }
       
       return success;
+    } on DioException catch (e) {
+      throw _mapPersonWriteError(e, '更新失败');
     } catch (e) {
       throw Exception('更新失败: $e');
     }
+  }
+
+  /// 把 DioException 分成两类：
+  /// - 网络层失败 → [OfflineQueueException]，页面据此转存离线队列；
+  /// - 服务端有响应（400 校验、401、500 等）→ 普通异常，直接提示，不入队。
+  static Exception _mapPersonWriteError(DioException e, String action) {
+    final typeName = e.type.name;
+    final isNetworkFailure = e.response == null &&
+        typeName != 'badCertificate' &&
+        typeName != 'cancel';
+    if (isNetworkFailure) {
+      return OfflineQueueException('网络不可用');
+    }
+
+    final data = e.response?.data;
+    if (data is Map && data['error'] != null) {
+      return Exception(data['error'].toString());
+    }
+    return Exception(
+        '$action：服务器返回 ${e.response?.statusCode ?? typeName}');
   }
   
   

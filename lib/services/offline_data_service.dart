@@ -249,16 +249,29 @@ class OfflineDataService {
   }
 
   
+  /// 删除队列项；若同一人员已无其他待同步操作，顺手清掉其离线缓存，
+  /// 避免设置页的"离线数据"一直占空间。
   Future<void> removeOperation(String operationId) async {
     try {
       final operations = await getPendingOperations();
-      operations.removeWhere((op) => op.id == operationId);
+      final index = operations.indexWhere((op) => op.id == operationId);
+      if (index == -1) return;
+
+      final removed = operations[index];
+      operations.removeAt(index);
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(
         _operationsKey,
         jsonEncode(operations.map((op) => op.toJson()).toList()),
       );
+
+      final stillCached = operations.any((op) =>
+          op.entityType == removed.entityType &&
+          op.entityId == removed.entityId);
+      if (!stillCached && removed.entityId.isNotEmpty) {
+        await removeData('${removed.entityType}_${removed.entityId}');
+      }
     } catch (e) {
       debugPrint('OfflineDataService.removeOperation error: $e');
     }
@@ -351,12 +364,17 @@ class OfflineDataService {
   
 
   
-  Future<void> savePersonOffline(Map<String, dynamic> personData) async {
+  /// 人员操作入离线队列。
+  ///
+  /// 必须显式传入 [isCreate]：data 里始终带 id_card，若用 id_card 是否为空判断，
+  /// 新增人员会被误记为 update，同步时 PUT 到不存在的人，重试 3 次后永久失败。
+  Future<void> savePersonOffline(
+    Map<String, dynamic> personData, {
+    required bool isCreate,
+  }) async {
     final operation = OfflineOperation(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      type: personData['id_card'] == null
-          ? OperationType.create
-          : OperationType.update,
+      id: generateId(),
+      type: isCreate ? OperationType.create : OperationType.update,
       entityType: 'person',
       entityId: personData['id_card'] ?? '',
       data: personData,
@@ -365,6 +383,30 @@ class OfflineDataService {
 
     await queueOperation(operation);
     await saveData('person_${personData['id_card']}', personData);
+  }
+
+  /// 手动重试：把失败项复位为待同步，并清零重试次数。
+  Future<void> resetOperationForRetry(String operationId) async {
+    try {
+      final operations = await getPendingOperations();
+      final index = operations.indexWhere((op) => op.id == operationId);
+      if (index == -1) return;
+
+      operations[index] = operations[index].copyWith(
+        status: SyncStatus.pending,
+        retryCount: 0,
+        // 清掉上一次的失败原因，避免重试成功后仍显示旧错误
+        conflictReason: '',
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        _operationsKey,
+        jsonEncode(operations.map((op) => op.toJson()).toList()),
+      );
+    } catch (e) {
+      debugPrint('OfflineDataService.resetOperationForRetry error: $e');
+    }
   }
 
   

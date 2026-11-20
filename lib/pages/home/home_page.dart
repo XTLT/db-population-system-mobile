@@ -7,6 +7,7 @@ import '../../widgets/feature_tooltip.dart';
 import '../../widgets/sync_status_indicator.dart';
 import '../settings/settings_page.dart';
 import '../notification/notification_center_page.dart';
+import '../todo/todo_center_page.dart';
 import 'person_list_page.dart';
 import '../student/student_list_page.dart';
 import 'stats_page.dart';
@@ -35,11 +36,15 @@ class _HomePageState extends State<HomePage> {
     const PersonListPage(),
     const StudentListPage(),
     const StatsPage(),
+    const TodoCenterPage(),
   ];
   
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
+    // 待办角标：断网期间产生的草稿 + 待处理的冲突，打开 App 就能看到没同步完
+    final sync = context.watch<SyncProvider>();
+    final todoBadge = sync.pendingCount + sync.conflictCount;
     
     return Scaffold(
       appBar: AppBar(
@@ -133,18 +138,31 @@ class _HomePageState extends State<HomePage> {
             _currentIndex = index;
           });
         },
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.people),
             label: '人员查询',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.school),
             label: '学生管理',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.bar_chart),
             label: '数据统计',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: todoBadge > 0,
+              label: Text('$todoBadge'),
+              child: const Icon(Icons.task_alt),
+            ),
+            selectedIcon: Badge(
+              isLabelVisible: todoBadge > 0,
+              label: Text('$todoBadge'),
+              child: const Icon(Icons.task_alt),
+            ),
+            label: '待办',
           ),
         ],
       ),

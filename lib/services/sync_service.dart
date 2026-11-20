@@ -22,9 +22,13 @@ class SyncService {
     final operations = await OfflineDataService().getPendingOperations();
 
     
+    // syncing 是上次同步中途退出（进程被杀/断网）的残留，按待同步重试，
+    // 否则这类操作会永远停在"同步中"。
     final pendingOps = operations
         .where((op) =>
-            op.status == SyncStatus.pending || op.status == SyncStatus.failed)
+            op.status == SyncStatus.pending ||
+            op.status == SyncStatus.failed ||
+            op.status == SyncStatus.syncing)
         .toList();
 
     result.totalOperations = pendingOps.length;
@@ -50,9 +54,22 @@ class SyncService {
         
         await OfflineDataService().updateOperationStatus(op.id, SyncStatus.synced);
         result.successCount++;
+      } on SyncConflictException {
+        await OfflineDataService().updateOperationStatus(
+          op.id,
+          SyncStatus.conflict,
+          conflictReason: '服务器记录已被修改，请人工核对',
+        );
+        result.conflictCount++;
       } catch (e) {
-        
+        final reason = _shortReason(e);
         await OfflineDataService().incrementRetryCount(op.id);
+        // 把真实原因写回队列，村里能看到"到底卡在哪"，而不是笼统的失败
+        await OfflineDataService().updateOperationStatus(
+          op.id,
+          SyncStatus.failed,
+          conflictReason: reason,
+        );
         result.failedCount++;
         debugPrint('同步操作失败 [${op.type}] ${op.entityId}: $e');
       }
@@ -66,6 +83,9 @@ class SyncService {
 
   
   Future<void> _syncOperation(OfflineOperation op) async {
+    if (op.entityType == 'person' && op.entityId.isEmpty) {
+      throw Exception('人员草稿缺少身份证号，无法同步');
+    }
     switch (op.type) {
       case OperationType.create:
         await _syncCreate(op);
@@ -86,10 +106,29 @@ class SyncService {
   }
 
   
+  /// 离线 payload 里的 `__education` 是本地附加的就读信息，不能发给人员接口。
+  Map<String, dynamic> _personPayload(OfflineOperation op) {
+    final payload = Map<String, dynamic>.from(op.data);
+    payload.remove('__education');
+    return payload;
+  }
+
+  /// 人员提交成功后，单独提交离线时暂存的就读信息。
+  Future<void> _syncEducationIfAny(OfflineOperation op) async {
+    final raw = op.data['__education'];
+    if (raw is! Map || raw.isEmpty) return;
+    await PersonApi.updateEducation(
+      op.entityId,
+      Map<String, dynamic>.from(raw),
+    );
+  }
+
   Future<void> _syncCreate(OfflineOperation op) async {
     if (op.entityType == 'person') {
-      final person = Person.fromJson(op.data);
-      await PersonApi.addPerson(person.toJson());
+      // 直接提交离线时保存的原始 payload：经 Person 模型往返会丢掉
+      // 表单里的补贴/林地/变更原因等字段。
+      await PersonApi.addPerson(_personPayload(op));
+      await _syncEducationIfAny(op);
     } else if (op.entityType == 'student') {
       final student = Student.fromJson(op.data);
       await StudentApi.addStudent(student.toJson());
@@ -107,7 +146,7 @@ class SyncService {
         
         if (_hasConflict(op, serverPerson)) {
           await OfflineDataService().saveConflict(op, serverData);
-          return;
+          throw const SyncConflictException();
         }
       } catch (e) {
         
@@ -115,9 +154,9 @@ class SyncService {
       }
 
       
-      await PersonApi.updatePerson(op.entityId, op.data);
+      await PersonApi.updatePerson(op.entityId, _personPayload(op));
+      await _syncEducationIfAny(op);
     } else if (op.entityType == 'student') {
-      
       await StudentApi.updateStudent(op.entityId, op.data);
     }
   }
@@ -185,6 +224,17 @@ class SyncService {
   }
 
   
+  /// 把异常压成一行短文案，写进队列给用户看。
+  String _shortReason(Object e) {
+    var text = e
+        .toString()
+        .replaceFirst(RegExp(r'^Exception:\s*'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+    if (text.length > 80) text = '${text.substring(0, 80)}…';
+    return text.isEmpty ? '同步失败' : text;
+  }
+
   Future<int> getPendingCount() async {
     final operations = await OfflineDataService().getPendingOperations();
     return operations
@@ -205,8 +255,16 @@ class SyncResult {
   int totalOperations = 0;
   int successCount = 0;
   int failedCount = 0;
+  int conflictCount = 0;
 
-  bool get isSuccess => failedCount == 0;
-  String get summary =>
-      '成功: $successCount, 失败: $failedCount, 总计: $totalOperations';
+  bool get isSuccess => failedCount == 0 && conflictCount == 0;
+  String get summary => conflictCount > 0
+      ? '成功: $successCount, 失败: $failedCount, 冲突: $conflictCount, 总计: $totalOperations'
+      : '成功: $successCount, 失败: $failedCount, 总计: $totalOperations';
+}
+
+/// 同步时发现服务器记录已被他人改动，需要人工确认；
+/// 与普通失败区分开，避免被直接标记成"已同步"。
+class SyncConflictException implements Exception {
+  const SyncConflictException();
 }
