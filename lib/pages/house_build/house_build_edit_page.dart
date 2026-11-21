@@ -368,21 +368,21 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
             ),
           ),
         ]),
-        _card('拟申请建房情况（面积单位：平方米）', [
-          _field('apply_land_area', '申请宅基地面积', keyboard: TextInputType.number),
-          _field('building_area', '建筑面积', keyboard: TextInputType.number),
+        _card('拟申请建房情况（面积单位：m²）', [
+          _field('apply_land_area', '申请宅基地面积', keyboard: TextInputType.number, suffix: 'm²'),
+          _field('building_area', '建筑面积', keyboard: TextInputType.number, suffix: 'm²'),
           _field('cert_no', '权属证书号'),
           _dropdown('current_disposal', '现宅基地处置', _disposalOptions),
           _field('current_disposal_other', '处置其他说明'),
-          _field('current_land_area', '原宅基地面积', keyboard: TextInputType.number),
-          _field('foundation_area', '房基占地面积', keyboard: TextInputType.number),
+          _field('current_land_area', '原宅基地面积', keyboard: TextInputType.number, suffix: 'm²'),
+          _field('foundation_area', '房基占地面积', keyboard: TextInputType.number, suffix: 'm²'),
           _field('east_to', '东至'),
           _field('south_to', '南至'),
           _field('west_to', '西至'),
           _field('north_to', '北至'),
           _dropdown('build_type', '建房类型', _buildTypeOptions),
           _dropdown('land_type', '地类', _landTypeOptions),
-          _field('house_floor_area', '住房建筑面积', keyboard: TextInputType.number),
+          _field('house_floor_area', '住房建筑面积', keyboard: TextInputType.number, suffix: 'm²'),
           _field('floors', '建筑层数', keyboard: TextInputType.number),
           _field('building_height', '建筑高度', keyboard: TextInputType.number),
           _dropdown('neighbor_opinion', '征求相邻权利人意见', _yesNoOptions),
@@ -393,8 +393,8 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
         ]),
         _card('村（组）意见', [
           _field('village_opinion', '意见', lines: 3),
-          _field('village_leader', '负责人'),
-          _field('village_date', '日期', hint: '如 2026年11月20日'),
+          _field('village_leader', '负责人（仅存档，打印留空）'),
+          _field('village_date', '日期（仅存档，打印留空）', hint: '如 2025年11月20日'),
         ]),
         const SizedBox(height: 24),
       ],
@@ -405,13 +405,13 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        _card('拟批准情况（面积单位：平方米）', [
-          _field('approval_land_area', '批准宅基地面积', keyboard: TextInputType.number),
-          _field('approval_foundation_area', '房基占地面积', keyboard: TextInputType.number),
+        _card('拟批准情况（面积单位：m²）', [
+          _field('approval_land_area', '批准宅基地面积', keyboard: TextInputType.number, suffix: 'm²'),
+          _field('approval_foundation_area', '房基占地面积', keyboard: TextInputType.number, suffix: 'm²'),
           _field('approval_address', '建房地址'),
           _dropdown('approval_build_type', '建房类型', _buildTypeOptions),
           _dropdown('approval_land_type', '地类', _landTypeOptions),
-          _field('approval_house_floor_area', '住房建筑面积', keyboard: TextInputType.number),
+          _field('approval_house_floor_area', '住房建筑面积', keyboard: TextInputType.number, suffix: 'm²'),
           _field('approval_floors', '建筑层数', keyboard: TextInputType.number),
           _field('approval_height', '建筑高度', keyboard: TextInputType.number),
         ]),
@@ -445,7 +445,7 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
   }
 
   Widget _field(String key, String label,
-      {TextInputType? keyboard, int lines = 1, String? hint}) {
+      {TextInputType? keyboard, int lines = 1, String? hint, String? suffix}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: TextFormField(
@@ -456,6 +456,7 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
+          suffixText: suffix,
           isDense: true,
           border: const OutlineInputBorder(),
         ),
