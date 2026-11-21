@@ -6,7 +6,7 @@ import '../person/person_detail_page.dart';
 /// 待核销人员清单
 ///
 /// 列出"已标记死亡或迁出、但名下仍挂着补贴发放记录"的人员。
-/// 只读排查清单：点进去到人员详情处理对应补贴，不在本页改任何数据。
+/// 点卡片到人员详情处理对应补贴；处理完可点「已核销」把该人从清单里划掉。
 class PendingCorrectionPage extends StatefulWidget {
   const PendingCorrectionPage({super.key});
 
@@ -19,6 +19,7 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
   String? _errorMessage;
   int _total = 0;
   List<Map<String, dynamic>> _items = [];
+  final Set<String> _handling = {};
 
   @override
   void initState() {
@@ -50,6 +51,78 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
         _isLoading = false;
         _errorMessage = e.toString();
       });
+    }
+  }
+
+  /// 核销前确认：核销只把该人从清单划掉，名下补贴记录不会自动清理
+  Future<void> _confirmMark(Map<String, dynamic> item) async {
+    final personId = (item['person_id'] ?? '').toString();
+    if (personId.isEmpty || _handling.contains(personId)) return;
+    final name = (item['name'] ?? '').toString();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('标记为已核销？'),
+        content: Text(
+          '「${name.isEmpty ? "（无姓名）" : name}」将不再出现在待核销清单。'
+          '\n\n核销不会删除名下补贴记录，已处理过的才点。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('已核销'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await _markHandled(item);
+    }
+  }
+
+  Future<void> _markHandled(Map<String, dynamic> item) async {
+    final personId = (item['person_id'] ?? '').toString();
+    final name = (item['name'] ?? '').toString();
+    final idCard = (item['id_card'] ?? '').toString();
+    final moduleCount = (item['module_count'] as num?)?.toInt() ?? 0;
+    final modules = ((item['modules'] as List?) ?? const [])
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+    final labels =
+        modules.map((m) => (m['label'] ?? '').toString()).where((s) => s.isNotEmpty).join('、');
+
+    setState(() => _handling.add(personId));
+    try {
+      final ok = await PersonApi.markPendingCorrectionHandled(
+        personId: personId,
+        name: name,
+        idCard: idCard,
+        moduleLabels: labels,
+        moduleCount: moduleCount,
+      );
+      if (!mounted) return;
+      if (!ok) throw Exception('服务端未确认核销结果');
+      setState(() {
+        _items = _items
+            .where((e) => (e['person_id'] ?? '').toString() != personId)
+            .toList();
+        if (_total > 0 && _items.length < _total) _total = _items.length;      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('已核销「${name.isEmpty ? personId : name}」，不再出现在待核销清单'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    } finally {
+      if (mounted) setState(() => _handling.remove(personId));
     }
   }
 
@@ -132,7 +205,7 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '共 $_total 人待核销：这些人已标记死亡或迁出，但名下还有在发的补贴记录，需要到对应补贴模块停发/删除。',
+                  '共 $_total 人待核销：这些人已标记死亡或迁出，但名下还有在发的补贴记录，需要到对应补贴模块停发/删除。处理完点「已核销」，该人不再出现在本清单。',
                   style: TextStyle(fontSize: 13, color: Colors.orange.shade900),
                 ),
               ),
@@ -218,6 +291,26 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
                     '点击查看人员详情去处理',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
+                  const Spacer(),
+                  _handling.contains((item['person_id'] ?? '').toString())
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : OutlinedButton.icon(
+                          onPressed: () => _confirmMark(item),
+                          icon: const Icon(Icons.check, size: 16),
+                          label: const Text('已核销'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.green.shade700,
+                            side: BorderSide(color: Colors.green.shade300),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            minimumSize: const Size(0, 32),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
                 ],
               ),
             ],

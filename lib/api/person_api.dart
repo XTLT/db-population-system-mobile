@@ -247,6 +247,38 @@ class PersonApi {
     }
   }
 
+  /// 把待核销清单里的某个人标记为已核销，之后不再出现在清单里
+  static Future<bool> markPendingCorrectionHandled({
+    required String personId,
+    String name = '',
+    String idCard = '',
+    String moduleLabels = '',
+    int moduleCount = 0,
+    String totalAmount = '',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/persons/pending-correction/handled',
+        data: {
+          'person_id': personId,
+          'name': name,
+          'id_card': idCard,
+          'module_labels': moduleLabels,
+          'module_count': moduleCount,
+          'total_amount': totalAmount,
+        },
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data =
+            Map<String, dynamic>.from(response.data as Map);
+        return data['success'] ?? false;
+      }
+      throw Exception('标记已核销失败: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('标记已核销失败: $e');
+    }
+  }
+
   /// 村级数据体检：按常见数据质量问题分组返回待补录人员
   static Future<Map<String, dynamic>> getDataHealth() async {
     try {
