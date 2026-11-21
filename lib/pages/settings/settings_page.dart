@@ -246,42 +246,6 @@ class _SettingsPageState extends State<SettingsPage>
     }
   }
 
-  Future<void> _clearNetworkCache() async {
-    final confirmed = await _showConfirmDialog(
-      '确定要清空网络缓存吗？',
-    );
-    if (confirmed != true) return;
-
-    setState(() => _isClearing = true);
-    await NetworkCache().clear();
-    setState(() => _isClearing = false);
-    await _loadCacheInfo();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('网络缓存已清空')),
-      );
-    }
-  }
-
-  Future<void> _clearOfflineData() async {
-    final confirmed = await _showConfirmDialog(
-      '确定要清空离线数据吗？',
-    );
-    if (confirmed != true) return;
-
-    setState(() => _isClearing = true);
-    await OfflineDataService().clearAllData();
-    setState(() => _isClearing = false);
-    await _loadCacheInfo();
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('离线数据已清空')),
-      );
-    }
-  }
-
   Future<void> _clearAllCache() async {
     final confirmed = await _showConfirmDialog(
       '确定要清空所有缓存和数据吗？',
@@ -587,39 +551,18 @@ class _SettingsPageState extends State<SettingsPage>
             const SizedBox(height: 24),
 
 
-            // 缓存管理（合并自 AppSettingsPage）
+            // 数据清理（原来网络缓存/离线数据/全部三张卡合并为一个入口）
             _buildSection(
-              '缓存管理',
+              '数据清理',
               [
                 Card(
                   child: ListTile(
-                    leading: const Icon(Icons.cached),
-                    title: const Text('网络缓存'),
-                    subtitle: Text('大小: ${_formatSize(_networkCacheSize)}'),
-                    trailing: TextButton(
-                      onPressed: _clearNetworkCache,
-                      child: const Text('清空'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: ListTile(
-                    leading: const Icon(Icons.offline_bolt),
-                    title: const Text('离线数据'),
-                    subtitle: Text('大小: ${_formatSize(_offlineDataSize)}'),
-                    trailing: TextButton(
-                      onPressed: _clearOfflineData,
-                      child: const Text('清空'),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Card(
-                  child: ListTile(
                     leading: const Icon(Icons.delete_sweep),
-                    title: const Text('清空所有缓存'),
-                    subtitle: const Text('清空网络缓存和离线数据'),
+                    title: const Text('缓存与离线数据'),
+                    subtitle: Text(
+                      '网络缓存 ${_formatSize(_networkCacheSize)}'
+                      ' · 离线数据 ${_formatSize(_offlineDataSize)}',
+                    ),
                     trailing: ElevatedButton(
                       onPressed: _clearAllCache,
                       child: const Text('清空'),
