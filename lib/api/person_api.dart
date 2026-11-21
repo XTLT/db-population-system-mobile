@@ -348,6 +348,34 @@ class PersonApi {
   }
   
   
+  /// 下载全部人员、全部字段，用于移动端离线查询。
+  /// 数据量大，单独放长超时；不走 NetworkCache（该路径本身不在缓存白名单）。
+  static Future<List<Map<String, dynamic>>> fetchAllPersons() async {
+    try {
+      final response = await _dio.get(
+        '/api/persons/lookup-all',
+        options: Options(receiveTimeout: const Duration(seconds: 120)),
+      );
+      if (response.statusCode != 200) {
+        throw Exception('下载失败: ${response.statusCode}');
+      }
+      final data = response.data;
+      final raw = (data is Map) ? (data['persons'] ?? const []) : const [];
+      return (raw as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['error'] != null) {
+        throw Exception(data['error'].toString());
+      }
+      throw Exception('下载离线数据失败，请检查网络连接');
+    } catch (e) {
+      throw Exception('下载离线数据失败: $e');
+    }
+  }
+
   static Future<Map<String, dynamic>> getStatistics() async {
     try {
       final response = await _dio.get('/api/statistics');

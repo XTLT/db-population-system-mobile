@@ -1,7 +1,6 @@
 // 人员列表页 widget 测试
 // 覆盖：初始空态、空查询 SnackBar、搜索结果渲染、空结果提示、接口失败错误态
 // 网络：PersonApi.searchByName -> GET /api/search?name=...
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -113,6 +112,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.send));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 200));
+    await tester.pump(const Duration(seconds: 3));
 
     // 错误体（_errorMessage）与 SnackBar 均应包含错误信息
     expect(find.textContaining('服务器内部错误'), findsWidgets);

@@ -3,6 +3,7 @@ import '../../models/person.dart';
 import '../../api/person_api.dart';
 import '../../api/batch_operation_api.dart';
 import '../../services/offline_data_service.dart';
+import '../../services/person_offline_store.dart';
 import '../person/person_detail_page.dart';
 import '../house_build/house_build_list_page.dart';
 import '../search/advanced_search_page.dart';
@@ -19,6 +20,8 @@ class _PersonListPageState extends State<PersonListPage> {
   List<Person> _persons = [];
   bool _isLoading = false;
   String? _errorMessage;
+  bool _usingOfflineData = false;
+  DateTime? _offlineSavedAt;
   
   bool _isSelectionMode = false;
   Set<String> _selectedIds = {};
@@ -336,6 +339,7 @@ class _PersonListPageState extends State<PersonListPage> {
       _isLoading = true;
       _errorMessage = null;
       _persons = [];
+      _usingOfflineData = false;
     });
 
     try {
@@ -375,17 +379,185 @@ class _PersonListPageState extends State<PersonListPage> {
         );
       }
     } catch (e) {
+      // 网络不可用 / 查询失败时，优先走已下载的全量离线数据。
+      final offline = await _searchOffline(raw);
+      if (offline != null) {
+        if (!mounted) return;
+        setState(() {
+          _persons = offline;
+          _isLoading = false;
+          _errorMessage = null;
+          _usingOfflineData = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              offline.isEmpty
+                  ? '离线数据中未找到相关记录（下载于 ${_formatOfflineTime()}）'
+                  : '网络不可用，已切换到离线数据：找到 ${offline.length} 条（下载于 ${_formatOfflineTime()}）',
+            ),
+          ),
+        );
+        return;
+      }
+
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString();
+        _errorMessage = '$e\n可到“设置 → 数据管理”下载离线查询数据，断网时也能查。';
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('查询失败: $e')),
         );
       }
     }
+  }
+
+  /// 返回 null 表示本机还没有下载过离线数据；返回列表表示已用离线数据查询（可能为空）。
+  Future<List<Person>?> _searchOffline(String input) async {
+    try {
+      final hits = await () async {
+        final info = await PersonOfflineStore.instance.info();
+        if (info.isEmpty) return null;
+        _offlineSavedAt = info.savedAt;
+        return await PersonOfflineStore.instance.search(input);
+      }()
+          .timeout(const Duration(seconds: 2));
+      return hits;
+    } catch (_) {
+      // 没有下载过、文件损坏或测试环境无存储插件，都按“没有离线数据”处理。
+      return null;
+    }
+  }
+
+  String _formatOfflineTime() {
+    final t = _offlineSavedAt;
+    if (t == null) return '时间未知';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${t.year}-${two(t.month)}-${two(t.day)} ${two(t.hour)}:${two(t.minute)}';
+  }
+
+  /// 断网时只展示已下载的全字段，不请求详情接口。
+  void _showOfflinePerson(Person person) {
+    const labels = <String, String>{
+      'name': '姓名',
+      'id_card': '身份证',
+      'hu_hao': '户号',
+      'address': '地址',
+      'group_name': '小组',
+      'relation': '与户主关系',
+      'phone': '电话',
+      'age': '年龄',
+      'is_dead': '是否死亡',
+      'death_date': '死亡日期',
+      'poor_type': '贫困类型',
+      'disability': '残疾',
+      'disability_type': '残疾类型',
+      'dis_level': '残疾等级',
+      'dibao': '低保',
+      'jisheng': '计生',
+      'tekun': '特困',
+      'tekun_type': '特困类型',
+      'social_card1': '社保卡1',
+      'social_card2': '社保卡2',
+      'social_card3': '社保卡3',
+      'social_card2_source': '社保卡2来源',
+      'social_card3_source': '社保卡3来源',
+      'is_migrated': '是否迁出',
+      'migration_date': '迁出日期',
+      'migration_place': '迁出地',
+      'migration_reason': '迁出原因',
+      'land_area': '土地面积',
+      'land_area_change_reason': '土地面积变动原因',
+      'land_area_change_time': '土地面积变动时间',
+      'local_welfare_forest_area': '地方公益林面积',
+      'local_welfare_forest_change_reason': '地方公益林变动原因',
+      'local_welfare_forest_change_time': '地方公益林变动时间',
+      'national_welfare_forest_area': '国家公益林面积',
+      'national_welfare_forest_change_reason': '国家公益林变动原因',
+      'national_welfare_forest_change_time': '国家公益林变动时间',
+      'commercial_forest_area': '商品林面积',
+      'commercial_forest_change_reason': '商品林变动原因',
+      'commercial_forest_change_time': '商品林变动时间',
+      'remark': '备注',
+      'updated_at': '数据更新时间',
+    };
+    final data = person.toJson();
+    final rows = <MapEntry<String, String>>[];
+    for (final entry in labels.entries) {
+      final value = data[entry.key];
+      if (value == null) continue;
+      final text = value.toString().trim();
+      if (text.isEmpty) continue;
+      rows.add(MapEntry(entry.value, text));
+    }
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.75,
+          maxChildSize: 0.95,
+          builder: (_, controller) => Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${person.displayName}（离线数据）',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(sheetContext),
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.separated(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                  itemCount: rows.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (_, index) {
+                    final row = rows[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            child: Text(
+                              row.key,
+                              style: TextStyle(color: Colors.grey.shade700),
+                            ),
+                          ),
+                          Expanded(
+                            child: SelectableText(row.value),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
   
   Future<void> _navigateToAdvancedSearch() async {
@@ -481,6 +653,29 @@ class _PersonListPageState extends State<PersonListPage> {
               enabled: !_isLoading,
             ),
           ),
+          if (_usingOfflineData)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                border: Border.all(color: Colors.orange.shade200),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.cloud_off, size: 18, color: Colors.orange.shade800),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '离线数据 · 下载于 ${_formatOfflineTime()}，可能不是最新',
+                      style: TextStyle(fontSize: 12, color: Colors.orange.shade900),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           if (_errorMessage != null)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -617,6 +812,10 @@ class _PersonListPageState extends State<PersonListPage> {
                                       ? () => _toggleSelection(personId)
                                       : null
                                   : () {
+                                      if (_usingOfflineData) {
+                                        _showOfflinePerson(person);
+                                        return;
+                                      }
                                       if (person.idCard != null) {
                                         Navigator.push(
                                           context,

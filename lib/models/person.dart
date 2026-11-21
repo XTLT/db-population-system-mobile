@@ -80,6 +80,11 @@ class Person {
   final String? socialCard3Source;
   final String? isMigrated;
   final String? landArea;
+  final String? landAreaChangeReason;
+  final String? landAreaChangeTime;
+  final String? migrationDate;
+  final String? migrationPlace;
+  final String? migrationReason;
   final String? localWelfareForestArea;
   final String? localWelfareForestChangeReason;
   final String? localWelfareForestChangeTime;
@@ -123,6 +128,11 @@ class Person {
     this.socialCard3Source,
     this.isMigrated,
     this.landArea,
+    this.landAreaChangeReason,
+    this.landAreaChangeTime,
+    this.migrationDate,
+    this.migrationPlace,
+    this.migrationReason,
     this.localWelfareForestArea,
     this.localWelfareForestChangeReason,
     this.localWelfareForestChangeTime,
@@ -165,6 +175,11 @@ class Person {
       socialCard3Source: json['social_card3_source'],
       isMigrated: json['is_migrated'],
       landArea: json['land_area'],
+      landAreaChangeReason: json['land_area_change_reason'],
+      landAreaChangeTime: json['land_area_change_time'],
+      migrationDate: json['migration_date'],
+      migrationPlace: json['migration_place'],
+      migrationReason: json['migration_reason'],
       localWelfareForestArea: json['local_welfare_forest_area'],
       localWelfareForestChangeReason: json['local_welfare_forest_change_reason'],
       localWelfareForestChangeTime: json['local_welfare_forest_change_time'],
@@ -210,6 +225,11 @@ class Person {
       'social_card3_source': socialCard3Source,
       'is_migrated': isMigrated,
       'land_area': landArea,
+      'land_area_change_reason': landAreaChangeReason,
+      'land_area_change_time': landAreaChangeTime,
+      'migration_date': migrationDate,
+      'migration_place': migrationPlace,
+      'migration_reason': migrationReason,
       'local_welfare_forest_area': localWelfareForestArea,
       'local_welfare_forest_change_reason': localWelfareForestChangeReason,
       'local_welfare_forest_change_time': localWelfareForestChangeTime,

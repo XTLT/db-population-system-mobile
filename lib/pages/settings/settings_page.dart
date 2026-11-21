@@ -5,6 +5,7 @@ import '../../config/app_config.dart';
 import '../../services/domain_service.dart';
 import '../../services/network_cache.dart';
 import '../../services/offline_data_service.dart';
+import '../../services/person_offline_store.dart';
 import '../../api/api_client.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
@@ -38,6 +39,10 @@ class _SettingsPageState extends State<SettingsPage>
   int _offlineDataSize = 0;
   DateTime? _lastSyncTime;
   bool _isClearing = false;
+
+  // 全部人员离线数据（断网查询）
+  OfflinePersonInfo _offlinePersons = const OfflinePersonInfo.empty();
+  bool _downloadingAllPersons = false;
 
   @override
   void initState() {
@@ -73,12 +78,19 @@ class _SettingsPageState extends State<SettingsPage>
     final networkCacheSize = await NetworkCache().getCacheSize();
     final offlineDataSize = await OfflineDataService().getDataSize();
     final lastSyncTime = await OfflineDataService().getLastSyncTime();
+    OfflinePersonInfo offlinePersons;
+    try {
+      offlinePersons = await PersonOfflineStore.instance.info();
+    } catch (_) {
+      offlinePersons = const OfflinePersonInfo.empty();
+    }
 
     if (!mounted) return;
     setState(() {
       _networkCacheSize = networkCacheSize;
       _offlineDataSize = offlineDataSize;
       _lastSyncTime = lastSyncTime;
+      _offlinePersons = offlinePersons;
     });
   }
 
@@ -257,6 +269,7 @@ class _SettingsPageState extends State<SettingsPage>
       NetworkCache().clear(),
       OfflineDataService().clearAllData(),
       ApiClient().clearCache(),
+      PersonOfflineStore.instance.clear(),
     ]);
     setState(() => _isClearing = false);
     await _loadCacheInfo();
@@ -265,6 +278,57 @@ class _SettingsPageState extends State<SettingsPage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('所有缓存已清空')),
       );
+    }
+  }
+
+  Future<void> _downloadAllPersons() async {
+    if (_downloadingAllPersons) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('下载离线查询数据'),
+        content: const Text(
+          '将把全部人员、全部字段（含身份证、电话、住址等）下载到本机，'
+          '供断网时查询。数据只保存在本机应用目录，请妥善保管手机。\n\n'
+          '首次下载可能需要十几秒，建议在 Wi-Fi 下进行。',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('开始下载'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _downloadingAllPersons = true);
+    try {
+      final info = await PersonOfflineStore.instance.downloadAll();
+      if (!mounted) return;
+      setState(() => _offlinePersons = info);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '已下载 ${info.count} 人 · ${_formatSize(info.bytes)}，断网也能查询',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _downloadingAllPersons = false);
     }
   }
 
@@ -660,6 +724,30 @@ class _SettingsPageState extends State<SettingsPage>
             _buildSection(
               '数据管理',
               [
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.offline_pin, color: Colors.blue),
+                    title: const Text('离线查询数据（全部人员）'),
+                    subtitle: Text(
+                      _offlinePersons.isEmpty
+                          ? '尚未下载；下载后断网也能按姓名 / 身份证 / 户号 / 电话查询'
+                          : '已下载 ${_offlinePersons.count} 人'
+                              ' · ${_formatSize(_offlinePersons.bytes)}'
+                              ' · ${_offlinePersons.savedAt == null ? "时间未知" : _formatLastSyncTime(_offlinePersons.savedAt!)}',
+                    ),
+                    trailing: _downloadingAllPersons
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : ElevatedButton(
+                            onPressed: _downloadAllPersons,
+                            child: Text(_offlinePersons.isEmpty ? '下载' : '更新'),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 Card(
                   child: ListTile(
                     leading: const Icon(Icons.backup, color: Colors.orange),
