@@ -226,6 +226,7 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
     final isDead = (item['is_dead'] ?? '').toString() == '是';
     final isMigrated = (item['is_migrated'] ?? '').toString() == '是';
     final moduleCount = (item['module_count'] as num?)?.toInt() ?? 0;
+    final reopened = item['reopened'] == true;
     final modules = ((item['modules'] as List?) ?? const [])
         .map((e) => Map<String, dynamic>.from(e as Map))
         .toList();
@@ -261,6 +262,10 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
                     _buildTag('已死亡', Colors.red),
                   if (isDead && isMigrated) const SizedBox(width: 4),
                   if (isMigrated) _buildTag('已迁出', Colors.orange),
+                  if (reopened) ...[
+                    const SizedBox(width: 4),
+                    _buildTag('核销后新增补贴', Colors.deepOrange),
+                  ],
                   const Spacer(),
                   Text(
                     '$moduleCount 类补贴',
@@ -288,7 +293,7 @@ class _PendingCorrectionPageState extends State<PendingCorrectionPage> {
                 children: [
                   Icon(Icons.chevron_right, size: 18, color: Colors.grey.shade400),
                   Text(
-                    '点击查看人员详情去处理',
+                    reopened ? '核销后又有新补贴，处理完可再次核销' : '点击查看人员详情去处理',
                     style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                   ),
                   const Spacer(),
