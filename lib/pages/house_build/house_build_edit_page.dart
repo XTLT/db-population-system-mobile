@@ -54,6 +54,10 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
     ['1', '1.是'],
     ['2', '2.否'],
   ];
+  static const _mirrorSourceKeys = [
+    'foundation_area', 'build_type', 'land_type',
+    'house_floor_area', 'floors', 'building_height',
+  ];
   static const _approvalGroups = [
     ['natural', '乡镇自然资源机构意见'],
     ['housing', '乡镇住房建设机构意见'],
@@ -185,6 +189,16 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
       });
     }
     final payload = <String, dynamic>{};
+    // 审批表与申请表重复的项统一取申请表，避免录两次
+    _data['approval_foundation_area'] = _data['foundation_area'];
+    _data['approval_build_type'] = _data['build_type'];
+    _data['approval_land_type'] = _data['land_type'];
+    _data['approval_house_floor_area'] = _data['house_floor_area'];
+    _data['approval_floors'] = _data['floors'];
+    _data['approval_height'] = _data['building_height'];
+    if ((_data['approval_address'] ?? '').toString().trim().isEmpty) {
+      _data['approval_address'] = _data['owner_hukou'];
+    }
     for (final key in _appFieldKeys) {
       payload[key] = (_data[key] ?? '').toString().trim();
     }
@@ -405,15 +419,22 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
     return ListView(
       padding: const EdgeInsets.all(12),
       children: [
-        _card('拟批准情况（面积单位：m²）', [
+        _card('拟批准情况（灰色项沿用申请表，不用重复填；面积单位：m²）', [
           _field('approval_land_area', '批准宅基地面积', keyboard: TextInputType.number, suffix: 'm²'),
-          _field('approval_foundation_area', '房基占地面积', keyboard: TextInputType.number, suffix: 'm²'),
-          _field('approval_address', '建房地址'),
-          _dropdown('approval_build_type', '建房类型', _buildTypeOptions),
-          _dropdown('approval_land_type', '地类', _landTypeOptions),
-          _field('approval_house_floor_area', '住房建筑面积', keyboard: TextInputType.number, suffix: 'm²'),
-          _field('approval_floors', '建筑层数', keyboard: TextInputType.number),
-          _field('approval_height', '建筑高度', keyboard: TextInputType.number),
+          _mirror('房基占地面积', 'foundation_area', suffix: ' m²'),
+          _field('approval_address', '建房地址', hint: '不填默认用户口所在地'),
+          _mirror('建房类型', 'build_type', options: _buildTypeOptions),
+          _mirror('地类', 'land_type', options: _landTypeOptions),
+          _mirror('住房建筑面积', 'house_floor_area', suffix: ' m²'),
+          _mirror('建筑层数', 'floors'),
+          _mirror('建筑高度', 'building_height'),
+        ]),
+        _card('提示', [
+          const Text(
+            '审批表打印时五个机构意见格按空表原文（示例意见 +（盖章）+ 空白负责人/年月日），'
+            '下面填写的意见与负责人仅存档、不打印。',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
         ]),
         for (final group in _approvalGroups)
           _card(group[1], [
@@ -460,7 +481,38 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
           isDense: true,
           border: const OutlineInputBorder(),
         ),
-        onChanged: (value) => _data[key] = value,
+        onChanged: (value) {
+          _data[key] = value;
+          if (_mirrorSourceKeys.contains(key)) setState(() {});
+        },
+      ),
+    );
+  }
+
+  Widget _mirror(String label, String sourceKey, {List<List<String>>? options, String suffix = ''}) {
+    var text = (_data[sourceKey] ?? '').toString().trim();
+    if (options != null) {
+      for (final option in options) {
+        if (option[0] == text) {
+          text = option[1];
+          break;
+        }
+      }
+    }
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          border: const OutlineInputBorder(),
+          filled: true,
+          fillColor: Colors.grey.shade100,
+        ),
+        child: Text(
+          text.isEmpty ? '沿用申请表' : '$text$suffix',
+          style: const TextStyle(fontSize: 14),
+        ),
       ),
     );
   }
@@ -481,7 +533,10 @@ class _HouseBuildEditPageState extends State<HouseBuildEditPage> {
         items: options
             .map((e) => DropdownMenuItem<String>(value: e[0], child: Text(e[1])))
             .toList(),
-        onChanged: (v) => _data[key] = v ?? '',
+        onChanged: (v) {
+          _data[key] = v ?? '';
+          if (_mirrorSourceKeys.contains(key)) setState(() {});
+        },
       ),
     );
   }
