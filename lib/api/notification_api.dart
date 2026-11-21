@@ -81,4 +81,46 @@ class NotificationApi {
       throw Exception('发送通知失败: $e');
     }
   }
+
+  /// 到龄提醒名单：下月满 60/80 周岁、尚未标记"已办理"的人员。
+  static Future<Map<String, dynamic>> getAgeNotice() async {
+    try {
+      final response = await _dio.get('/api/notifications/age-notice');
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      throw Exception('获取到龄名单失败: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('获取到龄名单失败: $e');
+    }
+  }
+
+  /// 把某位到龄人员标记为"已办理"，之后提醒不再包含该人。
+  static Future<bool> markAgeNoticeHandled({
+    required String personId,
+    required int ageGroup,
+    String name = '',
+    String idCard = '',
+    String month = '',
+  }) async {
+    try {
+      final response = await _dio.post(
+        '/api/notifications/age-notice/handled',
+        data: {
+          'person_id': personId,
+          'age_group': ageGroup,
+          'name': name,
+          'id_card': idCard,
+          'month': month,
+        },
+      );
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = response.data;
+        return data['success'] ?? false;
+      }
+      throw Exception('标记已办理失败: ${response.statusCode}');
+    } catch (e) {
+      throw Exception('标记已办理失败: $e');
+    }
+  }
 }

@@ -8,7 +8,7 @@ import '../../services/offline_data_service.dart';
 import '../../utils/todo_summary.dart';
 import '../correction/pending_correction_page.dart';
 import '../data/data_health_page.dart';
-import '../notification/notification_center_page.dart';
+import '../notification/age_notice_page.dart';
 import 'offline_queue_page.dart';
 
 /// 村级待办工作台
@@ -208,10 +208,14 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
 
   Future<void> _loadAge() async {
     try {
-      final list = await NotificationApi.getNotifications(limit: 50);
+      // 名单接口会排除已办理的人，卡片人数与进入后看到的一致
+      final data = await NotificationApi.getAgeNotice();
       if (!mounted) return;
       setState(() {
-        _age = summarizeAgeNotifications(list);
+        _age = AgeTodoSummary(
+          persons: (data['total'] as num?)?.toInt() ?? 0,
+          monthLabel: (data['month_label'] ?? '').toString(),
+        );
         _ageError = false;
       });
     } catch (_) {
@@ -292,7 +296,7 @@ class _TodoCenterPageState extends State<TodoCenterPage> {
                           ? '暂无下月满 60/80 周岁人员'
                           : '${_age.monthLabel}满 60/80 周岁'
                               '${_age.unread > 0 ? '，${_age.unread} 条未读' : ''}',
-                  onTap: () => _openAndRefresh(const NotificationCenterPage()),
+                  onTap: () => _openAndRefresh(const AgeNoticePage()),
                 ),
                 _card(
                   icon: Icons.cloud_upload_outlined,
