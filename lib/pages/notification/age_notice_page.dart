@@ -64,7 +64,7 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
       if (!ok) throw Exception('服务端未确认');
       setState(() => _data = _data.without(person.personId, ageGroup));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已标记「${person.name}」为已办理')),
+        SnackBar(content: Text('已办理，之后不再提醒「${person.name}」')),
       );
     } catch (e) {
       if (!mounted) return;
