@@ -4,6 +4,7 @@ import '../../api/person_api.dart';
 import '../../api/batch_operation_api.dart';
 import '../../services/offline_data_service.dart';
 import '../person/person_detail_page.dart';
+import '../house_build/house_build_list_page.dart';
 import '../search/advanced_search_page.dart';
 
 class PersonListPage extends StatefulWidget {
@@ -429,6 +430,17 @@ class _PersonListPageState extends State<PersonListPage> {
             ? '已选择 ${_selectedIds.length} 项' 
             : '人员列表'),
         actions: [
+          if (!_isSelectionMode)
+            IconButton(
+              icon: const Icon(Icons.home_work_outlined),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const HouseBuildListPage()),
+                );
+              },
+              tooltip: '宅基地建房申请',
+            ),
           if (!_isSelectionMode)
             IconButton(
               icon: const Icon(Icons.tune),
