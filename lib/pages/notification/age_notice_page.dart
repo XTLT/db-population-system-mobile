@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../../api/notification_api.dart';
 import '../../models/age_notice.dart';
 
-/// 到龄提醒：下月满 60 / 80 周岁人员的办理清单。
+/// 到龄提醒：累积的待办名单。
 ///
-/// 每行右侧一个「已办理」，点过之后服务端不再把该人算进提醒，这里也立即移除。
+/// 没办的人会一直留着；点「已办理」后当月仍然显示（标记为已办理），
+/// 到下一个自然月才从名单里消失。
 class AgeNoticePage extends StatefulWidget {
   const AgeNoticePage({super.key});
 
@@ -58,13 +59,15 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
         ageGroup: ageGroup,
         name: person.name,
         idCard: person.idCard,
-        month: _data.monthKey,
+        month: person.targetMonth.isNotEmpty
+            ? person.targetMonth
+            : _data.monthKey,
       );
       if (!mounted) return;
       if (!ok) throw Exception('服务端未确认');
-      setState(() => _data = _data.without(person.personId, ageGroup));
+      setState(() => _data = _data.markHandled(person.personId, ageGroup));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('已办理，之后不再提醒「${person.name}」')),
+        SnackBar(content: Text('已办理「${person.name}」，下月起不再提醒')),
       );
     } catch (e) {
       if (!mounted) return;
@@ -130,7 +133,7 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 56),
               child: Center(
-                child: Text('没有需要办理的人员',
+                child: Text('没有需要办理的到龄人员',
                     style: TextStyle(color: Colors.grey)),
               ),
             ),
@@ -141,8 +144,16 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
   }
 
   Widget _buildSummary() {
-    final clean = _data.isEmpty;
+    final pending = _data.pendingCount;
+    final handled = _data.handledCount;
+    final clean = pending == 0;
     final accent = clean ? Colors.green : Colors.blue;
+    final text = clean
+        ? (_data.total == 0
+            ? '没有待办理的到龄人员'
+            : '本月 $handled 人已全部办理，下月起不再提醒')
+        : '共 $pending 人待办理'
+            '${handled > 0 ? '，本月已办理 $handled 人（下月不再提醒）' : ''}';
     return Card(
       elevation: 0,
       color: accent.withValues(alpha: 0.08),
@@ -159,9 +170,7 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                clean
-                    ? '下月没有待办理的到龄人员'
-                    : '${_data.monthLabel}满 60/80 周岁，共 ${_data.total} 人待办理',
+                text,
                 style: TextStyle(
                   color: accent,
                   fontWeight: FontWeight.w600,
@@ -177,13 +186,15 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
 
   Widget _buildGroup(AgeNoticeGroup group) {
     if (group.persons.isEmpty) return const SizedBox.shrink();
+    final handled = group.handledCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
           child: Text(
-            '满 ${group.age} 周岁（${group.persons.length} 人）',
+            '满 ${group.age} 周岁（待办 ${group.pendingCount} 人'
+            '${handled > 0 ? '，已办理 $handled 人' : ''}）',
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
         ),
@@ -195,20 +206,26 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
   Widget _buildPersonCard(AgeNoticePerson person, int ageGroup) {
     final key = '${person.personId}_$ageGroup';
     final busy = _handling.contains(key);
+    final handled = person.handled;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: Colors.blue.withValues(alpha: 0.12),
+          backgroundColor:
+              (handled ? Colors.green : Colors.blue).withValues(alpha: 0.12),
           child: Text(
             person.name.isEmpty ? '?' : person.name.substring(0, 1),
-            style: const TextStyle(color: Colors.blue, fontSize: 14),
+            style: TextStyle(
+                color: handled ? Colors.green : Colors.blue, fontSize: 14),
           ),
         ),
         title: Text(
           person.name,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: handled ? Colors.grey : null,
+          ),
         ),
         subtitle: Text(
           person.detailLine,
@@ -225,10 +242,21 @@ class _AgeNoticePageState extends State<AgeNoticePage> {
                 height: 24,
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
-            : OutlinedButton(
-                onPressed: () => _markHandled(person, ageGroup),
-                child: const Text('已办理'),
-              ),
+            : handled
+                ? const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green, size: 18),
+                      SizedBox(width: 4),
+                      Text('已办理',
+                          style:
+                              TextStyle(color: Colors.green, fontSize: 13)),
+                    ],
+                  )
+                : OutlinedButton(
+                    onPressed: () => _markHandled(person, ageGroup),
+                    child: const Text('已办理'),
+                  ),
       ),
     );
   }
